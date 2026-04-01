@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Manutenção de TI - Supermercado</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="favicon.ico">
+</head>
+<body>
+
+    <!-- ===== TELA DE LOGIN ===== -->
+    <div id="telaLogin" class="login-overlay">
+        <div class="login-card">
+            <div class="login-logo">🛠️</div>
+            <h2 class="login-title">Sistema de Manutenção de TI</h2>
+            <p class="login-subtitle">Supermercado Reis</p>
+            <form id="formLogin" autocomplete="off">
+                <div class="login-field">
+                    <label for="loginUsuario">Usuário</label>
+                    <input type="text" id="loginUsuario" class="form-control" placeholder="Digite seu usuário" autocomplete="off" required>
+                </div>
+                <div class="login-field">
+                    <label for="loginSenha">Senha</label>
+                    <div class="login-senha-wrap">
+                        <input type="password" id="loginSenha" class="form-control" placeholder="Digite sua senha" required>
+                        <button type="button" class="login-toggle-senha" id="toggleSenha" title="Mostrar/ocultar senha">👁️</button>
+                    </div>
+                </div>
+                <div id="loginErro" class="login-erro" style="display:none;">Usuário ou senha incorretos.</div>
+                <button type="submit" class="btn btn-primary login-btn">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== APP PRINCIPAL (oculto até login) ===== -->
+    <div id="appPrincipal" style="display:none;">
+    <div class="container">
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🛠️ Sistema de Manutenção de TI</h1>
+                <p>Controle de Equipamentos — Supermercado Reis</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <span class="stat-number" id="totalManutencoes">0</span>
+                    <span class="stat-label">Manutenções Abertas</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="totalFinalizados">0</span>
+                    <span class="stat-label">Finalizados</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="totalPendentes">0</span>
+                    <span class="stat-label">Pendentes</span>
+                </div>
+                <!-- Usuário logado -->
+                <div class="stat-card usuario-card">
+                    <span class="usuario-avatar" id="usuarioAvatar">W</span>
+                    <span class="stat-number usuario-nome" id="usuarioNome">—</span>
+                    <button class="btn-logout" id="btnLogout" title="Sair">⏻ Sair</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="manutencoes">🔧 Manutenções</button>
+            <button class="tab-btn" data-tab="finalizados">✅ Finalizados</button>
+            <button class="tab-btn" data-tab="relatorios">📊 Relatórios</button>
+        </nav>
+
+        <!-- ===== ABA MANUTENÇÕES ===== -->
+        <div id="manutencoes" class="tab-content active">
+            <div class="section-header">
+                <h2>Manutenções em Aberto</h2>
+                <button class="btn btn-primary" id="btnNovaManutencao">➕ Nova Manutenção</button>
+            </div>
+            <div class="filters">
+                <input type="text" id="searchManutencao" placeholder="Buscar por equipamento, técnico ou problema..." class="search-input">
+                <select id="filterTipoManutencao" class="filter-select">
+                    <option value="">Todas as Localizações</option>
+                    <option value="Loja 001">Loja 001</option>
+                    <option value="Loja 002">Loja 002</option>
+                    <option value="Loja 003">Loja 003</option>
+                    <option value="Loja 004">Loja 004</option>
+                    <option value="Loja 005">Loja 005</option>
+                    <option value="Loja 006">Loja 006</option>
+                    <option value="Loja 007">Loja 007</option>
+                    <option value="Loja 008">Loja 008</option>
+                    <option value="Loja 009">Loja 009</option>
+                    <option value="Loja 010">Loja 010</option>
+                    <option value="Loja 011">Loja 011</option>
+                    <option value="Loja 012">Loja 012</option>
+                    <option value="Loja 013">Loja 013</option>
+                    <option value="Loja 014">Loja 014</option>
+                    <option value="Loja 015">Loja 015</option>
+                    <option value="Loja 016">Loja 016</option>
+                    <option value="Loja 017">Loja 017</option>
+                    <option value="Loja 018">Loja 018</option>
+                    <option value="Loja 019">Loja 019</option>
+                    <option value="Loja 020">Loja 020</option>
+                    <option value="Loja 021">Loja 021</option>
+                    <option value="Loja 022">Loja 022</option>
+                    <option value="Loja 023">Loja 023</option>
+                    <option value="Loja 024">Loja 024</option>
+                    <option value="Loja 025">Loja 025</option>
+                    <option value="Loja 026">Loja 026</option>
+                    <option value="Loja 027">Loja 027</option>
+                    <option value="Loja 028">Loja 028</option>
+                    <option value="Loja 029">Loja 029</option>
+                    <option value="Loja 030">Loja 030</option>
+                </select>
+                <select id="filterStatusManutencao" class="filter-select">
+                    <option value="">Todos os Status</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Em Andamento">Em Andamento</option>
+                </select>
+            </div>
+            <div id="listaManutencoes" class="table-container"></div>
+        </div>
+
+        <!-- ===== ABA FINALIZADOS ===== -->
+        <div id="finalizados" class="tab-content">
+            <div class="section-header">
+                <h2>Manutenções Finalizadas</h2>
+            </div>
+            <div class="filters">
+                <input type="text" id="searchFinalizado" placeholder="Buscar manutenção finalizada..." class="search-input">
+                <select id="filterTipoFinalizado" class="filter-select">
+                    <option value="">Todas as Localizações</option>
+                    <option value="Loja 001">Loja 001</option>
+                    <option value="Loja 002">Loja 002</option>
+                    <option value="Loja 003">Loja 003</option>
+                    <option value="Loja 004">Loja 004</option>
+                    <option value="Loja 005">Loja 005</option>
+                    <option value="Loja 006">Loja 006</option>
+                    <option value="Loja 007">Loja 007</option>
+                    <option value="Loja 008">Loja 008</option>
+                    <option value="Loja 009">Loja 009</option>
+                    <option value="Loja 010">Loja 010</option>
+                    <option value="Loja 011">Loja 011</option>
+                    <option value="Loja 012">Loja 012</option>
+                    <option value="Loja 013">Loja 013</option>
+                    <option value="Loja 014">Loja 014</option>
+                    <option value="Loja 015">Loja 015</option>
+                    <option value="Loja 016">Loja 016</option>
+                    <option value="Loja 017">Loja 017</option>
+                    <option value="Loja 018">Loja 018</option>
+                    <option value="Loja 019">Loja 019</option>
+                    <option value="Loja 020">Loja 020</option>
+                    <option value="Loja 021">Loja 021</option>
+                    <option value="Loja 022">Loja 022</option>
+                    <option value="Loja 023">Loja 023</option>
+                    <option value="Loja 024">Loja 024</option>
+                    <option value="Loja 025">Loja 025</option>
+                    <option value="Loja 026">Loja 026</option>
+                    <option value="Loja 027">Loja 027</option>
+                    <option value="Loja 028">Loja 028</option>
+                    <option value="Loja 029">Loja 029</option>
+                    <option value="Loja 030">Loja 030</option>
+                </select>
+            </div>
+            <div id="listaFinalizados" class="table-container"></div>
+        </div>
+
+        <!-- ===== ABA RELATÓRIOS ===== -->
+        <div id="relatorios" class="tab-content">
+            <h2 style="margin-bottom:20px;">Relatórios e Análises</h2>
+            <div class="relatorios-grid">
+                <div class="card">
+                    <h3>Gerar Relatório</h3>
+                    <form id="formRelatorio">
+                        <div class="form-group">
+                            <label>Tipo de Relatório</label>
+                            <select id="tipoRelatorio" class="form-control">
+                                <option value="manutencoes">Histórico de Manutenções</option>
+                                <option value="custos">Análise de Custos</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Período</label>
+                            <div class="date-range">
+                                <input type="date" id="dataInicio" class="form-control">
+                                <span>até</span>
+                                <input type="date" id="dataFim" class="form-control">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">📊 Gerar Relatório</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <h3>Estatísticas do Período</h3>
+                    <div id="estatisticasPeriodo" class="stats-grid"></div>
+                </div>
+                <div class="card full-width">
+                    <h3>Resultado</h3>
+                    <div id="resultadoRelatorio" class="relatorio-content"></div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /container -->
+
+    <!-- ===== MODAL — Nova / Editar Manutenção ===== -->
+    <div id="modalManutencao" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalManutencaoTitle">Nova Manutenção</h3>
+                <span class="close" data-modal="modalManutencao">&times;</span>
+            </div>
+            <form id="formManutencao">
+                <input type="hidden" id="manutencaoId">
+
+                <div class="form-row">
+                    <div class="form-group form-group-sm">
+                        <label>Nº do Atendimento</label>
+                        <input type="text" id="manutencaoNumero" class="form-control id-input" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencaoTipo">Localização *</label>
+                        <select id="manutencaoTipo" class="form-control" required>
+                            <option value="">Selecione...</option>
+                            <option value="Loja 001">Loja 001</option>
+                            <option value="Loja 002">Loja 002</option>
+                            <option value="Loja 003">Loja 003</option>
+                            <option value="Loja 004">Loja 004</option>
+                            <option value="Loja 005">Loja 005</option>
+                            <option value="Loja 006">Loja 006</option>
+                            <option value="Loja 007">Loja 007</option>
+                            <option value="Loja 008">Loja 008</option>
+                            <option value="Loja 009">Loja 009</option>
+                            <option value="Loja 010">Loja 010</option>
+                            <option value="Loja 011">Loja 011</option>
+                            <option value="Loja 012">Loja 012</option>
+                            <option value="Loja 013">Loja 013</option>
+                            <option value="Loja 014">Loja 014</option>
+                            <option value="Loja 015">Loja 015</option>
+                            <option value="Loja 016">Loja 016</option>
+                            <option value="Loja 017">Loja 017</option>
+                            <option value="Loja 018">Loja 018</option>
+                            <option value="Loja 019">Loja 019</option>
+                            <option value="Loja 020">Loja 020</option>
+                            <option value="Loja 021">Loja 021</option>
+                            <option value="Loja 022">Loja 022</option>
+                            <option value="Loja 023">Loja 023</option>
+                            <option value="Loja 024">Loja 024</option>
+                            <option value="Loja 025">Loja 025</option>
+                            <option value="Loja 026">Loja 026</option>
+                            <option value="Loja 027">Loja 027</option>
+                            <option value="Loja 028">Loja 028</option>
+                            <option value="Loja 029">Loja 029</option>
+                            <option value="Loja 030">Loja 030</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="manutencaoEquipamento">Equipamento / Descrição *</label>
+                    <input type="text" id="manutencaoEquipamento" class="form-control"
+                           placeholder="Ex: PDV Caixa 3, Impressora Fiscal, Balança Açougue..."
+                           list="equipamentosDatalist" autocomplete="off" required>
+                    <datalist id="equipamentosDatalist"></datalist>
+                    <small class="form-hint">Digite livremente ou escolha um nome já usado</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manutencaoDataInicio">Data de Início *</label>
+                        <input type="datetime-local" id="manutencaoDataInicio" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencaoDataFim">Data de Conclusão</label>
+                        <input type="datetime-local" id="manutencaoDataFim" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manutencaoTecnico">Técnico Responsável *
+                            <span class="tecnico-auto-tag" id="tecnicoAutoTag">preenchido automaticamente</span>
+                        </label>
+                        <select id="manutencaoTecnico" class="form-control" required>
+                            <option value="">Selecione...</option>
+                            <option value="Weric">Weric</option>
+                            <option value="Jhean">Jhean</option>
+                            <option value="Paulo">Paulo</option>
+                            <option value="Lucas">Lucas</option>
+                            <option value="Volney">Volney</option>
+                            <option value="Wendel">Wendel</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencaoStatus">Status *</label>
+                        <select id="manutencaoStatus" class="form-control" required>
+                            <option value="Operacional">Operacional</option>
+                            <option value="Em Manutenção">Em Manutenção</option>
+                            <option value="Aguardando Peças">Aguardando Peças</option>
+                            <option value="Fora de Operação">Fora de Operação</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="manutencaoProblema">Descrição do Problema *</label>
+                    <textarea id="manutencaoProblema" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="manutencaoSolucao">Solução Aplicada</label>
+                    <textarea id="manutencaoSolucao" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manutencaoCusto">Custo (R$)</label>
+                        <input type="number" id="manutencaoCusto" class="form-control" step="0.01" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencaoPecas">Peças Utilizadas</label>
+                        <input type="text" id="manutencaoPecas" class="form-control" placeholder="Ex: Fonte, HD, Cabo...">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal="modalManutencao">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="btnFinalizar" onclick="finalizarAtendimento()">✅ Finalizar Atendimento</button>
+                    <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== MODAL — Detalhes ===== -->
+    <div id="modalDetalhes" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3 id="modalDetalhesTitle">Detalhes da Manutenção</h3>
+                <span class="close" data-modal="modalDetalhes">&times;</span>
+            </div>
+            <div id="modalDetalhesContent" style="padding:25px;"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal="modalDetalhes">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL — Resultado do Reparo ===== -->
+    <div id="modalResultadoReparo" class="modal">
+        <div class="modal-content" style="max-width:440px;">
+            <div class="modal-header">
+                <h3>Resultado do Atendimento</h3>
+                <span class="close" data-modal="modalResultadoReparo">&times;</span>
+            </div>
+            <div style="padding:30px;text-align:center;">
+                <p style="font-size:1.05rem;color:var(--text-secondary);margin-bottom:28px;">
+                    O equipamento foi consertado ou o problema persiste?
+                </p>
+                <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+                    <button id="btnResultadoConsertado" class="btn btn-success" style="flex:1;min-width:160px;font-size:1rem;padding:16px 20px;">
+                        ✅ Consertado
+                    </button>
+                    <button id="btnResultadoSemReparo" class="btn btn-danger" style="flex:1;min-width:160px;font-size:1rem;padding:16px 20px;">
+                        ❌ Sem Reparo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div><!-- /appPrincipal -->
+
+    <script src="script.js"></script>
+</body>
+</html>

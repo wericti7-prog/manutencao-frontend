@@ -1,0 +1,1243 @@
+// =============================================
+// DATABASE
+// =============================================
+class Database {
+    constructor() {
+        this.manutencoes   = this.loadData('manutencoes')   || [];
+        this.seqManutencao = parseInt(this.loadRaw('seqManutencao') || '0');
+    }
+
+    loadRaw(key) {
+        return localStorage.getItem(key);
+    }
+
+    loadData(key) {
+        const d = localStorage.getItem(key);
+        return d ? JSON.parse(d) : null;
+    }
+
+    saveData(key, data) {
+        localStorage.setItem(key, JSON.stringify(data));
+    }
+
+    // ID sequencial: 001, 002, 003...
+    generateManutencaoId() {
+        this.seqManutencao++;
+        localStorage.setItem('seqManutencao', this.seqManutencao);
+        return String(this.seqManutencao).padStart(3, '0');
+    }
+
+    // Manutenções CRUD
+    addManutencao(m) {
+        m.id     = this.generateManutencaoId();
+        m.numero = m.id;
+        this.manutencoes.push(m);
+        this.saveData('manutencoes', this.manutencoes);
+        return m;
+    }
+
+    updateManutencao(id, data) {
+        const i = this.manutencoes.findIndex(m => m.id === id);
+        if (i !== -1) {
+            this.manutencoes[i] = { ...this.manutencoes[i], ...data };
+            this.saveData('manutencoes', this.manutencoes);
+            return this.manutencoes[i];
+        }
+        return null;
+    }
+
+    deleteManutencao(id) {
+        this.manutencoes = this.manutencoes.filter(m => m.id !== id);
+        this.saveData('manutencoes', this.manutencoes);
+    }
+
+    getManutencao(id) {
+        return this.manutencoes.find(m => m.id === id);
+    }
+
+    getAllManutencoes() {
+        return this.manutencoes;
+    }
+
+    // Lista de nomes de equipamentos já usados (para datalist)
+    getEquipamentosUsados() {
+        const nomes = this.manutencoes.map(m => m.equipamento).filter(Boolean);
+        return [...new Set(nomes)].sort();
+    }
+}
+
+const db = new Database();
+
+// =============================================
+// UTILITÁRIOS
+// =============================================
+function formatDate(d) {
+    if (!d) return '-';
+    return new Date(d).toLocaleDateString('pt-BR');
+}
+
+function formatDateTime(d) {
+    if (!d) return '-';
+    return new Date(d).toLocaleString('pt-BR');
+}
+
+function formatCurrency(v) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+}
+
+function getStatusBadge(status) {
+    const map = {
+        'Operacional':      'badge-operacional',
+        'Em Manutenção':    'badge-em-manutencao',
+        'Aguardando Peças': 'badge-aguardando-pecas',
+        'Fora de Operação': 'badge-fora-operacao',
+        // Mantém os antigos para compatibilidade
+        'Pendente':         'badge-warning',
+        'Em Andamento':     'badge-info',
+        'Concluída':        'badge-success',
+        'Cancelada':        'badge-secondary'
+    };
+    return map[status] || 'badge-secondary';
+}
+
+function updateStats() {
+    const todas     = db.getAllManutencoes();
+    const abertas   = todas.filter(m => m.status !== 'Concluída' && m.status !== 'Cancelada');
+    const finalizados = todas.filter(m => m.status === 'Concluída' || m.status === 'Cancelada');
+    const pendentes = abertas.filter(m => m.status === 'Pendente');
+
+    document.getElementById('totalManutencoes').textContent = abertas.length;
+    document.getElementById('totalFinalizados').textContent = finalizados.length;
+    document.getElementById('totalPendentes').textContent   = pendentes.length;
+}
+
+function populateDatalist() {
+    const dl = document.getElementById('equipamentosDatalist');
+    if (!dl) return;
+    dl.innerHTML = db.getEquipamentosUsados()
+        .map(n => `<option value="${n}">`)
+        .join('');
+}
+
+// =============================================
+// NAVEGAÇÃO POR ABAS
+// =============================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(tab).classList.add('active');
+
+        if (tab === 'manutencoes') loadManutencoes();
+        if (tab === 'finalizados') loadFinalizados();
+        if (tab === 'relatorios')  loadRelatorios();
+        updateStats();
+    });
+});
+
+// =============================================
+// MODAIS
+// =============================================
+function openModal(id)  { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+document.querySelectorAll('.close').forEach(btn =>
+    btn.addEventListener('click', () => closeModal(btn.dataset.modal))
+);
+document.querySelectorAll('.modal').forEach(modal =>
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal.id); })
+);
+document.querySelectorAll('.btn-secondary[data-modal]').forEach(btn =>
+    btn.addEventListener('click', () => closeModal(btn.dataset.modal))
+);
+
+// =============================================
+// ABA MANUTENÇÕES
+// =============================================
+function loadManutencoes() {
+    populateDatalist();
+
+    const search     = (document.getElementById('searchManutencao')?.value || '').toLowerCase();
+    const filterTipo = document.getElementById('filterTipoManutencao')?.value || '';
+    const filterSt   = document.getElementById('filterStatusManutencao')?.value || '';
+
+    let lista = db.getAllManutencoes().filter(m => {
+        if (m.status === 'Concluída' || m.status === 'Cancelada') return false;
+        const matchSearch = (m.equipamento || '').toLowerCase().includes(search)
+            || (m.tecnico || '').toLowerCase().includes(search)
+            || (m.problema || '').toLowerCase().includes(search);
+        return matchSearch
+            && (!filterTipo || m.tipo   === filterTipo)
+            && (!filterSt   || m.status === filterSt);
+    });
+
+    lista.sort((a, b) => new Date(b.dataInicio) - new Date(a.dataInicio));
+
+    if (lista.length === 0) {
+        document.getElementById('listaManutencoes').innerHTML =
+            '<div class="empty-state"><h3>Nenhuma manutenção em aberto</h3><p>Clique em "Nova Manutenção" para registrar</p></div>';
+        return;
+    }
+
+    const rows = lista.map(m => `
+        <tr>
+            <td><span class="id-badge">${m.numero || m.id}</span></td>
+            <td><strong>${m.equipamento || '-'}</strong></td>
+            <td>${m.tipo}</td>
+            <td>${m.tecnico}</td>
+            <td>${formatDateTime(m.dataInicio)}</td>
+            <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+            <td>${formatCurrency(m.custo)}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon btn-history" onclick="verDetalhes('${m.id}')" title="Ver Detalhes">📋</button>
+                    <button class="btn-icon btn-edit"    onclick="editManutencao('${m.id}')" title="Editar">✏️</button>
+                    <button class="btn-icon btn-delete"  onclick="deleteManutencao('${m.id}')" title="Excluir">🗑️</button>
+                </div>
+            </td>
+        </tr>`).join('');
+
+    document.getElementById('listaManutencoes').innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Nº</th>
+                    <th>Equipamento</th>
+                    <th>Tipo</th>
+                    <th>Técnico</th>
+                    <th>Início</th>
+                    <th>Status</th>
+                    <th>Custo</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+}
+
+// =============================================
+// MODAL — NOVA / EDITAR MANUTENÇÃO
+// =============================================
+function abrirModalNovaManutencao() {
+    document.getElementById('formManutencao').reset();
+    document.getElementById('manutencaoId').value = '';
+
+    // Pré-visualiza o próximo número
+    const proximo = String(db.seqManutencao + 1).padStart(3, '0');
+    document.getElementById('manutencaoNumero').value = proximo + ' (novo)';
+    document.getElementById('modalManutencaoTitle').textContent = 'Nova Manutenção';
+
+    // Botão finalizar oculto em novo registro
+    document.getElementById('btnFinalizar').style.display = 'none';
+
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('manutencaoDataInicio').value = now.toISOString().slice(0, 16);
+
+    populateDatalist();
+    openModal('modalManutencao');
+}
+
+document.getElementById('btnNovaManutencao').addEventListener('click', abrirModalNovaManutencao);
+
+document.getElementById('formManutencao').addEventListener('submit', e => {
+    e.preventDefault();
+    salvarManutencao(false);
+});
+
+function salvarManutencao(finalizar) {
+    const dados = coletarDadosForm();
+
+    if (finalizar) {
+        dados.status  = 'Concluída';
+        dados.dataFim = dados.dataFim || new Date().toISOString().slice(0, 16);
+    }
+
+    const id = document.getElementById('manutencaoId').value;
+    if (id) {
+        db.updateManutencao(id, dados);
+    } else {
+        db.addManutencao(dados);
+    }
+
+    closeModal('modalManutencao');
+    loadManutencoes();
+    loadFinalizados();
+    updateStats();
+
+    const msg = finalizar ? 'Atendimento finalizado com sucesso!' : 'Manutenção salva com sucesso!';
+    alert(msg);
+}
+
+function coletarDadosForm() {
+    return {
+        equipamento: document.getElementById('manutencaoEquipamento').value,
+        tipo:        document.getElementById('manutencaoTipo').value,
+        dataInicio:  document.getElementById('manutencaoDataInicio').value,
+        dataFim:     document.getElementById('manutencaoDataFim').value,
+        tecnico:     document.getElementById('manutencaoTecnico').value,
+        status:      document.getElementById('manutencaoStatus').value,
+        problema:    document.getElementById('manutencaoProblema').value,
+        solucao:     document.getElementById('manutencaoSolucao').value,
+        custo:       parseFloat(document.getElementById('manutencaoCusto').value) || 0,
+        pecas:       document.getElementById('manutencaoPecas').value
+    };
+}
+
+function finalizarAtendimento() {
+    // Valida campos obrigatórios manualmente antes de finalizar
+    const campos = ['manutencaoEquipamento','manutencaoTipo','manutencaoDataInicio','manutencaoTecnico','manutencaoProblema'];
+    for (const id of campos) {
+        if (!document.getElementById(id).value.trim()) {
+            document.getElementById(id).focus();
+            alert('Preencha todos os campos obrigatórios antes de finalizar.');
+            return;
+        }
+    }
+    if (confirm('Confirmar finalização deste atendimento?')) {
+        salvarManutencao(true);
+    }
+}
+
+function editManutencao(id) {
+    const m = db.getManutencao(id);
+    if (!m) return;
+
+    document.getElementById('manutencaoId').value          = m.id;
+    document.getElementById('manutencaoNumero').value      = m.numero || m.id;
+    document.getElementById('manutencaoEquipamento').value = m.equipamento || '';
+    document.getElementById('manutencaoTipo').value        = m.tipo;
+    document.getElementById('manutencaoDataInicio').value  = m.dataInicio;
+    document.getElementById('manutencaoDataFim').value     = m.dataFim || '';
+    document.getElementById('manutencaoTecnico').value     = m.tecnico;
+    document.getElementById('manutencaoStatus').value      = m.status;
+    document.getElementById('manutencaoProblema').value    = m.problema;
+    document.getElementById('manutencaoSolucao').value     = m.solucao || '';
+    document.getElementById('manutencaoCusto').value       = m.custo || 0;
+    document.getElementById('manutencaoPecas').value       = m.pecas || '';
+
+    document.getElementById('modalManutencaoTitle').textContent = `Editar Manutenção #${m.numero || m.id}`;
+    document.getElementById('btnFinalizar').style.display = 'inline-flex';
+
+    populateDatalist();
+    openModal('modalManutencao');
+}
+
+function deleteManutencao(id) {
+    if (confirm('Tem certeza que deseja excluir esta manutenção?')) {
+        db.deleteManutencao(id);
+        loadManutencoes();
+        loadFinalizados();
+        updateStats();
+        alert('Manutenção excluída com sucesso!');
+    }
+}
+
+// =============================================
+// DETALHES / HISTÓRICO
+// =============================================
+function verDetalhes(id) {
+    const m = db.getManutencao(id);
+    if (!m) return;
+
+    document.getElementById('modalDetalhesTitle').textContent = `Atendimento #${m.numero || m.id}`;
+    document.getElementById('modalDetalhesContent').innerHTML = `
+        <div class="historico-info">
+            <div class="historico-info-grid">
+                <div><strong>Nº Atendimento:</strong> <span class="id-badge">${m.numero || m.id}</span></div>
+                <div><strong>Equipamento:</strong> ${m.equipamento || '-'}</div>
+                <div><strong>Tipo:</strong> ${m.tipo}</div>
+                <div><strong>Técnico:</strong> ${m.tecnico}</div>
+                <div><strong>Início:</strong> ${formatDateTime(m.dataInicio)}</div>
+                <div><strong>Conclusão:</strong> ${formatDateTime(m.dataFim)}</div>
+                <div><strong>Status:</strong> <span class="badge ${getStatusBadge(m.status)}">${m.status}</span></div>
+                <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
+            </div>
+        </div>
+        <div style="margin-top:20px;">
+            <p><strong>Problema:</strong></p>
+            <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px;">${m.problema || '-'}</p>
+        </div>
+        <div style="margin-top:16px;">
+            <p><strong>Solução Aplicada:</strong></p>
+            <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px;">${m.solucao || '-'}</p>
+        </div>
+        ${m.pecas ? `<div style="margin-top:16px;"><p><strong>Peças Utilizadas:</strong> ${m.pecas}</p></div>` : ''}`;
+
+    openModal('modalDetalhes');
+}
+
+// =============================================
+// ABA FINALIZADOS
+// =============================================
+function loadFinalizados() {
+    const search     = (document.getElementById('searchFinalizado')?.value || '').toLowerCase();
+    const filterTipo = document.getElementById('filterTipoFinalizado')?.value || '';
+
+    let lista = db.getAllManutencoes().filter(m => {
+        if (m.status !== 'Concluída' && m.status !== 'Cancelada') return false;
+        const matchSearch = (m.equipamento || '').toLowerCase().includes(search)
+            || (m.tecnico || '').toLowerCase().includes(search)
+            || (m.problema || '').toLowerCase().includes(search);
+        return matchSearch && (!filterTipo || m.tipo === filterTipo);
+    });
+
+    lista.sort((a, b) => new Date(b.dataInicio) - new Date(a.dataInicio));
+
+    if (lista.length === 0) {
+        document.getElementById('listaFinalizados').innerHTML =
+            '<div class="empty-state"><h3>Nenhuma manutenção finalizada</h3><p>As manutenções concluídas ou canceladas aparecerão aqui</p></div>';
+        return;
+    }
+
+    const custoTotal = lista.reduce((s, m) => s + (m.custo || 0), 0);
+
+    const rows = lista.map(m => `
+        <tr>
+            <td><span class="id-badge">${m.numero || m.id}</span></td>
+            <td><strong>${m.equipamento || '-'}</strong></td>
+            <td>${m.tipo}</td>
+            <td>${m.tecnico}</td>
+            <td>${formatDateTime(m.dataInicio)}</td>
+            <td>${formatDateTime(m.dataFim)}</td>
+            <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+            <td>${formatCurrency(m.custo)}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon btn-history" onclick="verDetalhes('${m.id}')" title="Ver Detalhes">📋</button>
+                </div>
+            </td>
+        </tr>`).join('');
+
+    document.getElementById('listaFinalizados').innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Nº</th>
+                    <th>Equipamento</th>
+                    <th>Tipo</th>
+                    <th>Técnico</th>
+                    <th>Início</th>
+                    <th>Conclusão</th>
+                    <th>Status</th>
+                    <th>Custo</th>
+                    <th>Detalhes</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7" style="text-align:right;font-weight:600;padding:12px 15px;">Custo Total:</td>
+                    <td style="font-weight:700;color:var(--primary-color);padding:12px 15px;">${formatCurrency(custoTotal)}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>`;
+}
+
+// =============================================
+// ABA RELATÓRIOS
+// =============================================
+function loadRelatorios() {
+    const hoje = new Date();
+    const fim  = hoje.toISOString().split('T')[0];
+    const ini  = new Date(new Date().setMonth(hoje.getMonth() - 1)).toISOString().split('T')[0];
+    document.getElementById('dataInicio').value = ini;
+    document.getElementById('dataFim').value    = fim;
+    loadEstatisticasPeriodo(ini, fim);
+}
+
+function loadEstatisticasPeriodo(ini, fim) {
+    const lista = db.getAllManutencoes().filter(m => {
+        const d = new Date(m.dataInicio);
+        return d >= new Date(ini) && d <= new Date(fim);
+    });
+    const custo = lista.reduce((s, m) => s + (m.custo || 0), 0);
+    document.getElementById('estatisticasPeriodo').innerHTML = `
+        <div class="stat-item"><span class="stat-item-value">${lista.length}</span><span class="stat-item-label">Total</span></div>
+        <div class="stat-item"><span class="stat-item-value">${lista.filter(m=>m.tipo==='Preventiva').length}</span><span class="stat-item-label">Preventivas</span></div>
+        <div class="stat-item"><span class="stat-item-value">${lista.filter(m=>m.tipo==='Corretiva').length}</span><span class="stat-item-label">Corretivas</span></div>
+        <div class="stat-item"><span class="stat-item-value">${lista.filter(m=>m.status==='Concluída').length}</span><span class="stat-item-label">Concluídas</span></div>
+        <div class="stat-item"><span class="stat-item-value">${formatCurrency(custo)}</span><span class="stat-item-label">Custo Total</span></div>`;
+}
+
+document.getElementById('formRelatorio').addEventListener('submit', e => {
+    e.preventDefault();
+    const tipo = document.getElementById('tipoRelatorio').value;
+    const ini  = document.getElementById('dataInicio').value;
+    const fim  = document.getElementById('dataFim').value;
+    loadEstatisticasPeriodo(ini, fim);
+
+    const fns = {
+        manutencoes: () => gerarRelatorioManutencoes(ini, fim),
+        custos:      () => gerarRelatorioCustos(ini, fim)
+    };
+    document.getElementById('resultadoRelatorio').innerHTML = (fns[tipo] || (() => ''))();
+});
+
+function gerarRelatorioManutencoes(ini, fim) {
+    const lista = db.getAllManutencoes().filter(m => {
+        const d = new Date(m.dataInicio);
+        return d >= new Date(ini) && d <= new Date(fim);
+    });
+    if (lista.length === 0) return '<p class="empty-state">Nenhuma manutenção no período selecionado.</p>';
+    return `
+        <h4>Histórico de Manutenções (${formatDate(ini)} — ${formatDate(fim)})</h4>
+        <table>
+            <thead><tr><th>Nº</th><th>Equipamento</th><th>Tipo</th><th>Técnico</th><th>Problema</th><th>Data</th><th>Status</th><th>Custo</th></tr></thead>
+            <tbody>${lista.map(m => `
+                <tr>
+                    <td><span class="id-badge">${m.numero||m.id}</span></td>
+                    <td>${m.equipamento||'-'}</td>
+                    <td>${m.tipo}</td>
+                    <td>${m.tecnico}</td>
+                    <td>${(m.problema||'').substring(0,50)}${(m.problema||'').length>50?'…':''}</td>
+                    <td>${formatDate(m.dataInicio)}</td>
+                    <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+                    <td>${formatCurrency(m.custo)}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`;
+}
+
+function gerarRelatorioCustos(ini, fim) {
+    const lista = db.getAllManutencoes().filter(m => {
+        const d = new Date(m.dataInicio);
+        return d >= new Date(ini) && d <= new Date(fim);
+    });
+    const porTipo = {};
+    lista.forEach(m => { porTipo[m.tipo] = (porTipo[m.tipo]||0) + (m.custo||0); });
+    const total = Object.values(porTipo).reduce((a,b) => a+b, 0);
+    if (total === 0) return '<p class="empty-state">Nenhum custo registrado no período.</p>';
+    return `
+        <h4>Análise de Custos (${formatDate(ini)} — ${formatDate(fim)})</h4>
+        <div class="chart-container">
+            ${Object.entries(porTipo).map(([tipo, custo]) => {
+                const pct = total > 0 ? (custo/total*100).toFixed(0) : 0;
+                return `<div class="chart-bar">
+                    <span class="chart-label">${tipo}</span>
+                    <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%">${formatCurrency(custo)}</div></div>
+                </div>`;
+            }).join('')}
+        </div>
+        <p style="margin-top:20px;font-size:1.1rem;"><strong>Custo Total: ${formatCurrency(total)}</strong></p>`;
+}
+
+// =============================================
+// FILTROS
+// =============================================
+document.getElementById('searchManutencao')?.addEventListener('input', loadManutencoes);
+document.getElementById('filterTipoManutencao')?.addEventListener('change', loadManutencoes);
+document.getElementById('filterStatusManutencao')?.addEventListener('change', loadManutencoes);
+document.getElementById('searchFinalizado')?.addEventListener('input', loadFinalizados);
+document.getElementById('filterTipoFinalizado')?.addEventListener('change', loadFinalizados);
+
+// =============================================
+// INICIALIZAÇÃO
+// =============================================
+updateStats();
+loadManutencoes();
+
+
+----------------------------------------------------------------------------
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Manutenção de TI - Supermercado</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="favicon.ico">
+</head>
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🛠️ Sistema de Manutenção de TI</h1>
+                <p>Controle de Equipamentos — Supermercado Reis</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <span class="stat-number" id="totalManutencoes">0</span>
+                    <span class="stat-label">Manutenções Abertas</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="totalFinalizados">0</span>
+                    <span class="stat-label">Finalizados</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="totalPendentes">0</span>
+                    <span class="stat-label">Pendentes</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="manutencoes">🔧 Manutenções</button>
+            <button class="tab-btn" data-tab="finalizados">✅ Finalizados</button>
+            <button class="tab-btn" data-tab="relatorios">📊 Relatórios</button>
+        </nav>
+
+        <!-- ===== ABA MANUTENÇÕES ===== -->
+        <div id="manutencoes" class="tab-content active">
+            <div class="section-header">
+                <h2>Manutenções em Aberto</h2>
+                <button class="btn btn-primary" id="btnNovaManutencao">➕ Nova Manutenção</button>
+            </div>
+            <div class="filters">
+                <input type="text" id="searchManutencao" placeholder="Buscar por equipamento, técnico ou problema..." class="search-input">
+                <select id="filterTipoManutencao" class="filter-select">
+                    <option value="">Todos os Tipos</option>
+                    <option value="Preventiva">Preventiva</option>
+                    <option value="Corretiva">Corretiva</option>
+                    <option value="Instalação">Instalação</option>
+                    <option value="Atualização">Atualização</option>
+                </select>
+                <select id="filterStatusManutencao" class="filter-select">
+                    <option value="">Todos os Status</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Em Andamento">Em Andamento</option>
+                </select>
+            </div>
+            <div id="listaManutencoes" class="table-container"></div>
+        </div>
+
+        <!-- ===== ABA FINALIZADOS ===== -->
+        <div id="finalizados" class="tab-content">
+            <div class="section-header">
+                <h2>Manutenções Finalizadas</h2>
+            </div>
+            <div class="filters">
+                <input type="text" id="searchFinalizado" placeholder="Buscar manutenção finalizada..." class="search-input">
+                <select id="filterTipoFinalizado" class="filter-select">
+                    <option value="">Todos os Tipos</option>
+                    <option value="Preventiva">Preventiva</option>
+                    <option value="Corretiva">Corretiva</option>
+                    <option value="Instalação">Instalação</option>
+                    <option value="Atualização">Atualização</option>
+                </select>
+            </div>
+            <div id="listaFinalizados" class="table-container"></div>
+        </div>
+
+        <!-- ===== ABA RELATÓRIOS ===== -->
+        <div id="relatorios" class="tab-content">
+            <h2 style="margin-bottom:20px;">Relatórios e Análises</h2>
+            <div class="relatorios-grid">
+                <div class="card">
+                    <h3>Gerar Relatório</h3>
+                    <form id="formRelatorio">
+                        <div class="form-group">
+                            <label>Tipo de Relatório</label>
+                            <select id="tipoRelatorio" class="form-control">
+                                <option value="manutencoes">Histórico de Manutenções</option>
+                                <option value="custos">Análise de Custos</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Período</label>
+                            <div class="date-range">
+                                <input type="date" id="dataInicio" class="form-control">
+                                <span>até</span>
+                                <input type="date" id="dataFim" class="form-control">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">📊 Gerar Relatório</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <h3>Estatísticas do Período</h3>
+                    <div id="estatisticasPeriodo" class="stats-grid"></div>
+                </div>
+                <div class="card full-width">
+                    <h3>Resultado</h3>
+                    <div id="resultadoRelatorio" class="relatorio-content"></div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /container -->
+
+    <!-- ===== MODAL — Nova / Editar Manutenção ===== -->
+    <div id="modalManutencao" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalManutencaoTitle">Nova Manutenção</h3>
+                <span class="close" data-modal="modalManutencao">&times;</span>
+            </div>
+            <form id="formManutencao">
+                <input type="hidden" id="manutencaoId">
+
+                <div class="form-row">
+                    <div class="form-group form-group-sm">
+                        <label>Nº do Atendimento</label>
+                        <input type="text" id="manutencaoNumero" class="form-control id-input" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencaoTipo">Tipo de Manutenção *</label>
+                        <select id="manutencaoTipo" class="form-control" required>
+                            <option value="">Selecione...</option>
+                            <option value="Preventiva">Preventiva</option>
+                            <option value="Corretiva">Corretiva</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="manutencaoEquipamento">Equipamento / Descrição *</label>
+                    <input type="text" id="manutencaoEquipamento" class="form-control"
+                           placeholder="Ex: PDV Caixa 3, Impressora Fiscal, Balança Açougue..."
+                           list="equipamentosDatalist" autocomplete="off" required>
+                    <datalist id="equipamentosDatalist"></datalist>
+                    <small class="form-hint">Digite livremente ou escolha um nome já usado</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manutencaoDataInicio">Data de Início *</label>
+                        <input type="datetime-local" id="manutencaoDataInicio" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencaoDataFim">Data de Conclusão</label>
+                        <input type="datetime-local" id="manutencaoDataFim" class="form-control">
+                    </div>
+                </div>
+
+               <div class="form-row">
+    <div class="form-group">
+        <label for="manutencaoTecnico">Técnico Responsável *</label>
+        <select id="manutencaoTecnico" class="form-control" required>
+            <option value="">Selecione...</option>
+            <option value="Weric">Weric</option>
+            <option value="Jhean">Jhean</option>
+            <option value="Paulo">Paulo</option>
+            <option value="Lucas">Lucas</option>
+            <option value="Volney">Volney</option>
+            <option value="Wendel">Wendel</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="manutencaoStatus">Status *</label>
+        <select id="manutencaoStatus" class="form-control" required>
+            <option value="Operacional">Operacional</option>
+            <option value="Em Manutenção">Em Manutenção</option>
+            <option value="Aguardando Peças">Aguardando Peças</option>
+            <option value="Fora de Operação">Fora de Operação</option>
+        </select>
+    </div>
+</div>
+
+                <div class="form-group">
+                    <label for="manutencaoProblema">Descrição do Problema *</label>
+                    <textarea id="manutencaoProblema" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="manutencaoSolucao">Solução Aplicada</label>
+                    <textarea id="manutencaoSolucao" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manutencaoCusto">Custo (R$)</label>
+                        <input type="number" id="manutencaoCusto" class="form-control" step="0.01" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="manutencaoPecas">Peças Utilizadas</label>
+                        <input type="text" id="manutencaoPecas" class="form-control" placeholder="Ex: Fonte, HD, Cabo...">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal="modalManutencao">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="btnFinalizar" onclick="finalizarAtendimento()">✅ Finalizar Atendimento</button>
+                    <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== MODAL — Detalhes ===== -->
+    <div id="modalDetalhes" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3 id="modalDetalhesTitle">Detalhes da Manutenção</h3>
+                <span class="close" data-modal="modalDetalhes">&times;</span>
+            </div>
+            <div id="modalDetalhesContent" style="padding:25px;"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal="modalDetalhes">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
+-------------------------------------------------------------
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #2563eb;
+    --primary-dark: #1d4ed8;
+    --secondary-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --light-bg: #f9fafb;
+    --card-bg: #ffffff;
+    --border-color: #e5e7eb;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -2px rgba(0,0,0,.05);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: var(--light-bg);
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* ---- Header ---- */
+.header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    box-shadow: var(--shadow-lg);
+}
+
+.header-content h1 { font-size: 2rem; margin-bottom: 5px; }
+.header-content p  { opacity: .9; font-size: 1.1rem; }
+
+.header-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 25px;
+}
+
+.stat-card {
+    background: rgba(255,255,255,.15);
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,.2);
+}
+
+.stat-number { display:block; font-size:2.5rem; font-weight:bold; margin-bottom:5px; }
+.stat-label  { display:block; font-size:.95rem; opacity:.9; }
+
+/* ---- Tabs ---- */
+.tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 30px;
+    border-bottom: 2px solid var(--border-color);
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 14px 26px;
+    font-size: .95rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all .3s;
+    font-weight: 500;
+    margin-bottom: -2px;
+}
+
+.tab-btn:hover { color: var(--primary-color); background-color: rgba(37,99,235,.05); }
+.tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+/* ---- Tab Content ---- */
+.tab-content { display: none; animation: fadeIn .3s; }
+.tab-content.active { display: block; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Cards ---- */
+.card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+}
+
+.card h3 {
+    margin-bottom: 20px;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+/* ---- Section Header ---- */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.section-header h2 { font-size: 1.8rem; color: var(--text-primary); }
+
+/* ---- Buttons ---- */
+.btn {
+    padding: 12px 22px;
+    border: none;
+    border-radius: 8px;
+    font-size: .95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary   { background-color: var(--primary-color); color: white; }
+.btn-primary:hover { background-color: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+
+.btn-secondary { background-color: var(--text-secondary); color: white; }
+.btn-secondary:hover { background-color: #4b5563; }
+
+.btn-success { background-color: var(--secondary-color); color: white; }
+.btn-success:hover { background-color: #059669; transform: translateY(-1px); }
+
+.btn-danger  { background-color: var(--danger-color); color: white; }
+.btn-warning { background-color: var(--warning-color); color: white; }
+
+/* ---- Action Buttons ---- */
+.action-buttons { display: flex; gap: 6px; }
+
+.btn-icon {
+    padding: 7px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .2s;
+    font-size: .85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-edit    { background-color: #3b82f6; color: white; }
+.btn-edit:hover { background-color: #2563eb; }
+
+.btn-delete  { background-color: #ef4444; color: white; }
+.btn-delete:hover { background-color: #dc2626; }
+
+.btn-history { background-color: #7c3aed; color: white; }
+.btn-history:hover { background-color: #6d28d9; }
+
+/* ---- ID Badge ---- */
+.id-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    background-color: #ede9fe;
+    color: #5b21b6;
+    border-radius: 5px;
+    font-size: .8rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    letter-spacing: .5px;
+}
+
+/* ID no input do modal */
+.id-input {
+    background: #f3f4f6 !important;
+    font-weight: 700 !important;
+    color: var(--primary-color) !important;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    cursor: default;
+}
+
+/* Dica abaixo do campo */
+.form-hint {
+    display: block;
+    margin-top: 5px;
+    font-size: .82rem;
+    color: var(--text-secondary);
+}
+
+/* ---- Filters ---- */
+.filters { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+
+.search-input,
+.filter-select {
+    padding: 11px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: white;
+    transition: all .3s;
+}
+
+.search-input { flex: 1; min-width: 250px; }
+
+.search-input:focus,
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+
+.filter-select { min-width: 175px; }
+
+/* ---- Tables ---- */
+.table-container { overflow-x: auto; background: white; border-radius: 8px; }
+
+table { width: 100%; border-collapse: collapse; }
+thead { background-color: var(--light-bg); }
+
+th {
+    padding: 13px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); }
+tr:last-child td { border-bottom: none; }
+tr:hover { background-color: rgba(37,99,235,.02); }
+
+tfoot td {
+    background-color: var(--light-bg);
+    border-top: 2px solid var(--border-color);
+    border-bottom: none;
+}
+
+/* ---- Badges ---- */
+/* Substitua o bloco .badge existente por este: */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: .82rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.badge-success   { background-color: #d1fae5; color: #065f46; }
+.badge-warning   { background-color: #fed7aa; color: #92400e; }
+.badge-danger    { background-color: #fee2e2; color: #991b1b; }
+.badge-info      { background-color: #dbeafe; color: #1e40af; }
+.badge-secondary { background-color: #e5e7eb; color: #374151; }
+
+/* Novas cores para os status do sistema */
+.badge-operacional      { background-color: #d1fae5; color: #065f46; }      /* Verde - Operacional */
+.badge-em-manutencao    { background-color: #fed7aa; color: #92400e; }      /* Laranja - Em Manutenção */
+.badge-aguardando-pecas { background-color: #fef3c7; color: #b45309; }      /* Amarelo - Aguardando Peças */
+.badge-fora-operacao    { background-color: #fee2e2; color: #991b1b; }      /* Vermelho - Fora de Operação */
+
+/* ---- Modal ---- */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,.5);
+    backdrop-filter: blur(4px);
+}
+
+.modal.active { display: flex; justify-content: center; align-items: center; }
+
+.modal-content {
+    background-color: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp .25s ease;
+}
+
+.modal-wide { max-width: 860px; }
+
+@keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 { font-size: 1.35rem; color: var(--text-primary); }
+.close { font-size: 1.8rem; color: var(--text-secondary); cursor: pointer; transition: color .2s; line-height: 1; }
+.close:hover { color: var(--danger-color); }
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 25px;
+    border-top: 1px solid var(--border-color);
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-radius: 0 0 12px 12px;
+}
+
+/* ---- Forms ---- */
+form { padding: 20px 25px; }
+
+.form-group { margin-bottom: 16px; flex: 1; }
+.form-group-sm { max-width: 160px; }
+.form-row   { display: flex; gap: 18px; }
+
+label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--text-primary); font-size: .95rem; }
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: .97rem;
+    transition: all .3s;
+    background: white;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+}
+
+textarea.form-control { resize: vertical; font-family: inherit; }
+
+/* ---- Histórico info ---- */
+.historico-info {
+    background: var(--light-bg);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+}
+
+.historico-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px 20px;
+}
+
+.historico-info-grid > div { font-size: .93rem; color: var(--text-secondary); }
+.historico-info-grid > div strong { color: var(--text-primary); }
+
+/* ---- Charts ---- */
+.chart-container { display: flex; flex-direction: column; gap: 12px; }
+
+.chart-bar { display: flex; align-items: center; gap: 15px; }
+.chart-label { min-width: 110px; font-weight: 500; font-size: .93rem; }
+
+.chart-bar-bg {
+    flex: 1;
+    background-color: var(--light-bg);
+    border-radius: 8px;
+    height: 32px;
+    overflow: hidden;
+}
+
+.chart-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    border-radius: 8px;
+    transition: width .5s;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 10px;
+    color: white;
+    font-weight: 500;
+    font-size: .88rem;
+    min-width: 30px;
+}
+
+/* ---- Relatórios ---- */
+.relatorios-grid { display: grid; gap: 20px; }
+.date-range { display: flex; align-items: center; gap: 10px; }
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+}
+
+.stat-item { padding: 14px; background-color: var(--light-bg); border-radius: 8px; text-align: center; }
+.stat-item-value { display: block; font-size: 1.65rem; font-weight: bold; color: var(--primary-color); margin-bottom: 4px; }
+.stat-item-label { display: block; font-size: .85rem; color: var(--text-secondary); }
+
+.relatorio-content { min-height: 180px; }
+.full-width { grid-column: 1 / -1; }
+
+/* ---- Empty State ---- */
+.empty-state { text-align: center; padding: 55px 20px; color: var(--text-secondary); }
+.empty-state h3 { margin-bottom: 8px; color: var(--text-primary); font-size: 1.15rem; }
+.empty-state p  { font-size: .95rem; }
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .container { padding: 12px; }
+    .header { padding: 20px; }
+    .header-content h1 { font-size: 1.45rem; }
+    .tabs { overflow-x: auto; white-space: nowrap; }
+    .tab-btn { padding: 12px 18px; font-size: .88rem; }
+    .filters { flex-direction: column; }
+    .search-input, .filter-select { width: 100%; }
+    .form-row { flex-direction: column; }
+    .form-group-sm { max-width: 100%; }
+    .modal-content { width: 96%; }
+    table { font-size: .86rem; }
+    th, td { padding: 10px 8px; }
+    .section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .historico-info-grid { grid-template-columns: 1fr; }
+    .modal-footer { flex-wrap: wrap; }
+    .modal-footer .btn { flex: 1; justify-content: center; }
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: var(--light-bg); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
