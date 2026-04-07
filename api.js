@@ -2,7 +2,7 @@
 // Em desenvolvimento aponta para localhost; em produção troque pela URL do Railway
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
-    : "https://SEU-BACKEND.railway.app";   // ← troque após o deploy
+    : "https://manutencao-backend-production-a072.up.railway.app";   // ← troque após o deploy
 
 // ─── Token JWT — localStorage mantém após fechar/reabrir o navegador ──────────
 function getToken() { return localStorage.getItem("jwt_token"); }
