@@ -2,12 +2,12 @@
 // Em desenvolvimento aponta para localhost; em produção troque pela URL do Railway
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
-    : "https://manutencao-backend-production-a072.up.railway.app/docs";   // ← troque após o deploy
+    : "https://SEU-BACKEND.railway.app";   // ← troque após o deploy
 
-// ─── Token JWT ────────────────────────────────────────────────────────────────
-function getToken() { return sessionStorage.getItem("jwt_token"); }
-function setToken(t) { sessionStorage.setItem("jwt_token", t); }
-function clearToken() { sessionStorage.removeItem("jwt_token"); }
+// ─── Token JWT — localStorage mantém após fechar/reabrir o navegador ──────────
+function getToken() { return localStorage.getItem("jwt_token"); }
+function setToken(t) { localStorage.setItem("jwt_token", t); }
+function clearToken() { localStorage.removeItem("jwt_token"); }
 
 function authHeaders() {
     return {
@@ -46,7 +46,7 @@ export async function login(username, password) {
     if (!res.ok) throw new Error("Usuário ou senha incorretos.");
     const data = await res.json();
     setToken(data.access_token);
-    sessionStorage.setItem("usuario_logado", JSON.stringify({
+    localStorage.setItem("usuario_logado", JSON.stringify({
         nome: data.nome, username: data.username, role: data.role
     }));
     return data;
@@ -54,11 +54,11 @@ export async function login(username, password) {
 
 export function logout() {
     clearToken();
-    sessionStorage.removeItem("usuario_logado");
+    localStorage.removeItem("usuario_logado");
 }
 
 export function getUsuarioLogado() {
-    const s = sessionStorage.getItem("usuario_logado");
+    const s = localStorage.getItem("usuario_logado");
     return s ? JSON.parse(s) : null;
 }
 
