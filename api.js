@@ -1,98 +1,128 @@
-// ─── Configuração ─────────────────────────────────────────────────────────────
-// Em desenvolvimento aponta para localhost; em produção troque pela URL do Railway
+// ─── CONFIGURAÇÃO — substitua pela URL real do seu Railway ────────────────────
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
-    : "https://manutencao-backend-production-a072.up.railway.app";   // ← troque após o deploy
+    : "https://SEU-BACKEND.up.railway.app"; // ← coloque sua URL do Railway aqui
 
-// ─── Token JWT — localStorage mantém após fechar/reabrir o navegador ──────────
-function getToken() { return localStorage.getItem("jwt_token"); }
-function setToken(t) { localStorage.setItem("jwt_token", t); }
-function clearToken() { localStorage.removeItem("jwt_token"); }
+// ─── Armazenamento — localStorage persiste entre recarregamentos ──────────────
+const storage = {
+    getToken:    ()  => localStorage.getItem("jwt_token"),
+    setToken:    (t) => localStorage.setItem("jwt_token", t),
+    clearToken:  ()  => localStorage.removeItem("jwt_token"),
+    getUsuario:  ()  => { const s = localStorage.getItem("usuario_logado"); return s ? JSON.parse(s) : null; },
+    setUsuario:  (u) => localStorage.setItem("usuario_logado", JSON.stringify(u)),
+    clearUsuario:()  => localStorage.removeItem("usuario_logado"),
+};
 
+// ─── Headers padrão com token ─────────────────────────────────────────────────
 function authHeaders() {
+    const token = storage.getToken();
     return {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${getToken()}`
+        "Content-Type":  "application/json",
+        "Authorization": token ? `Bearer ${token}` : "",
     };
 }
 
-// ─── Fetch com tratamento de erros ────────────────────────────────────────────
+// ─── Fetch central com tratamento de erro ─────────────────────────────────────
 async function apiFetch(path, options = {}) {
-    const res = await fetch(API_BASE + path, {
-        headers: authHeaders(),
-        ...options,
-    });
+    let res;
+    try {
+        res = await fetch(API_BASE + path, {
+            headers: { ...authHeaders(), ...(options.headers || {}) },
+            ...options,
+        });
+    } catch (e) {
+        // Falha de rede — backend inacessível ou URL errada
+        throw new Error(
+            "Não foi possível conectar ao servidor. " +
+            "Verifique se a URL do Railway em api.js está correta."
+        );
+    }
+
     if (res.status === 401) {
-        clearToken();
-        mostrarLogin();
+        storage.clearToken();
+        storage.clearUsuario();
+        // Dispara evento para o script.js tratar sem referência circular
+        window.dispatchEvent(new CustomEvent("sessao-expirada"));
         throw new Error("Sessão expirada. Faça login novamente.");
     }
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Erro ${res.status}`);
-    }
+
     if (res.status === 204) return null;
+
+    if (!res.ok) {
+        let detalhe = `Erro ${res.status}`;
+        try {
+            const err = await res.json();
+            detalhe = err.detail || detalhe;
+        } catch {}
+        throw new Error(detalhe);
+    }
+
     return res.json();
 }
 
-// ─── Auth ──────────────────────────────────────────────────────────────────────
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
 export async function login(username, password) {
-    const form = new URLSearchParams({ username, password });
-    const res = await fetch(API_BASE + "/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: form,
-    });
-    if (!res.ok) throw new Error("Usuário ou senha incorretos.");
+    const body = new URLSearchParams({ username, password });
+    let res;
+    try {
+        res = await fetch(API_BASE + "/auth/login", {
+            method:  "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
+        });
+    } catch (e) {
+        throw new Error(
+            "Não foi possível conectar ao servidor. " +
+            "Verifique se a URL do Railway em api.js está correta e se o backend está rodando."
+        );
+    }
+
+    if (!res.ok) {
+        let msg = "Usuário ou senha incorretos.";
+        try { const e = await res.json(); msg = e.detail || msg; } catch {}
+        throw new Error(msg);
+    }
+
     const data = await res.json();
-    setToken(data.access_token);
-    localStorage.setItem("usuario_logado", JSON.stringify({
-        nome: data.nome, username: data.username, role: data.role
-    }));
+    storage.setToken(data.access_token);
+    storage.setUsuario({ nome: data.nome, username: data.username, role: data.role });
     return data;
 }
 
 export function logout() {
-    clearToken();
-    localStorage.removeItem("usuario_logado");
+    storage.clearToken();
+    storage.clearUsuario();
 }
 
 export function getUsuarioLogado() {
-    const s = localStorage.getItem("usuario_logado");
-    return s ? JSON.parse(s) : null;
+    return storage.getUsuario();
 }
 
-// ─── Manutenções ───────────────────────────────────────────────────────────────
+export function isLogado() {
+    return !!storage.getToken() && !!storage.getUsuario();
+}
+
+// ─── MANUTENÇÕES ──────────────────────────────────────────────────────────────
 export function listarManutencoes(params = {}) {
     const qs = new URLSearchParams(
-        Object.fromEntries(Object.entries(params).filter(([, v]) => v))
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ""))
     ).toString();
     return apiFetch("/manutencoes" + (qs ? "?" + qs : ""));
 }
 
-export function getManutencao(id) { return apiFetch(`/manutencoes/${id}`); }
-
-export function criarManutencao(data) {
-    return apiFetch("/manutencoes", { method: "POST", body: JSON.stringify(data) });
-}
-
-export function editarManutencao(id, data) {
-    return apiFetch(`/manutencoes/${id}`, { method: "PUT", body: JSON.stringify(data) });
-}
+export function getManutencao(id)       { return apiFetch(`/manutencoes/${id}`); }
+export function criarManutencao(data)   { return apiFetch("/manutencoes",        { method: "POST",   body: JSON.stringify(data) }); }
+export function editarManutencao(id, d) { return apiFetch(`/manutencoes/${id}`,  { method: "PUT",    body: JSON.stringify(d) }); }
+export function excluirManutencao(id)   { return apiFetch(`/manutencoes/${id}`,  { method: "DELETE" }); }
+export function getHistorico(id)        { return apiFetch(`/manutencoes/${id}/historico`); }
 
 export function finalizarManutencao(id, data) {
     return apiFetch(`/manutencoes/${id}/finalizar`, { method: "POST", body: JSON.stringify(data) });
 }
 
-export function excluirManutencao(id) {
-    return apiFetch(`/manutencoes/${id}`, { method: "DELETE" });
-}
-
-export function getHistorico(id) { return apiFetch(`/manutencoes/${id}/historico`); }
-
 export function getSugestoes() { return apiFetch("/equipamentos/sugestoes"); }
 
-// ─── Usuários (gerência) ───────────────────────────────────────────────────────
-export function listarUsuarios()       { return apiFetch("/usuarios"); }
-export function criarUsuario(data)     { return apiFetch("/usuarios", { method: "POST", body: JSON.stringify(data) }); }
-export function excluirUsuario(id)     { return apiFetch(`/usuarios/${id}`, { method: "DELETE" }); }
+// ─── USUÁRIOS (gerência) ──────────────────────────────────────────────────────
+export function listarUsuarios()     { return apiFetch("/usuarios"); }
+export function criarUsuario(data)   { return apiFetch("/usuarios",        { method: "POST",   body: JSON.stringify(data) }); }
+export function excluirUsuario(id)   { return apiFetch(`/usuarios/${id}`,  { method: "DELETE" }); }

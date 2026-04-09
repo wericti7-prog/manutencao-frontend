@@ -1,2 +1,0 @@
-# manutencao-frontend
-claude-frontend
