@@ -1,7 +1,7 @@
 // ─── CONFIGURAÇÃO — substitua pela URL real do seu Railway ────────────────────
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
-    : "https://SEU-BACKEND.up.railway.app"; // ← coloque sua URL do Railway aqui
+    : "https://manutencao-backend-production-a072.up.railway.app"; // ← coloque sua URL do Railway aqui
 
 // ─── Armazenamento — localStorage persiste entre recarregamentos ──────────────
 const storage = {
