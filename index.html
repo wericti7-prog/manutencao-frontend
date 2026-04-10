@@ -409,5 +409,11 @@
     </div><!-- /appPrincipal -->
 
     <script type="module" src="script.js"></script>
+    <script>
+      // Keep-Alive — mantém o backend acordado
+      setInterval(() => {
+        fetch("https://manutencao-backend-production-a072.up.railway.app/ping").catch(() => {});
+      }, 4 * 60 * 1000);
+    </script>
 </body>
 </html>
