@@ -2,6 +2,7 @@
 const API_BASE = window.location.hostname === "localhost"
     ? "http://localhost:8000"
     : "https://manutencao-backend-production-a072.up.railway.app";
+    
 
 // ─── Armazenamento — localStorage persiste entre recarregamentos ──────────────
 const storage = {
