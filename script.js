@@ -11,7 +11,6 @@ function getStatusBadge(s) {
         "Em Manutenção":         "badge-em-manutencao",
         "Aguardando Peças":      "badge-aguardando-pecas",
         "Fora de Operação":      "badge-fora-operacao",
-        "Pendente":              "badge-warning",
         "Em Andamento":          "badge-info",
         "Aguardando aprovação":  "badge-warning",
         "Concluída":             "badge-success",
