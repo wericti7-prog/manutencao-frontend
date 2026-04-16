@@ -149,23 +149,22 @@ async function loadManutencoes() {
         '<div class="empty-state"><p>Carregando...</p></div>';
 
     try {
-        // Busca TODAS as manutenções e filtra localmente as abertas
-        // (exclui Concluída e Cancelada que ficam na aba Finalizados)
+        // Busca TODAS as manutenções sem passar "busca" para a API
+        // O filtro de texto é feito 100% localmente para garantir busca por número do chamado
         const params = {};
-        if (tipo)   params.localizacao = tipo;
-        if (search) params.busca = search;
-        if (st)     params.status = st;   // filtro de status do select (Pendente / Em Andamento)
+        if (tipo) params.localizacao = tipo;
+        if (st)   params.status = st;
 
         let lista = await api.listarManutencoes(params);
 
-        // Filtra localmente pelo número do chamado e demais campos
+        // Filtro local por número do chamado, equipamento, técnico ou problema
         if (search) {
             const s = search.toLowerCase();
             lista = lista.filter(m =>
-                (m.numero    || "").toString().toLowerCase().includes(s) ||
+                (m.numero      || "").toString().toLowerCase().includes(s) ||
                 (m.equipamento || "").toLowerCase().includes(s) ||
-                (m.tecnico   || "").toLowerCase().includes(s) ||
-                (m.problema  || "").toLowerCase().includes(s)
+                (m.tecnico     || "").toLowerCase().includes(s) ||
+                (m.problema    || "").toLowerCase().includes(s)
             );
         }
 
@@ -433,14 +432,13 @@ async function loadFinalizados() {
     document.getElementById("listaFinalizados").innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
     try {
         const params = {};
-        if (tipo)   params.localizacao = tipo;
-        if (search) params.busca = search;
+        if (tipo) params.localizacao = tipo;
 
         const todas = await api.listarManutencoes(params);
         // Filtra localmente só as finalizadas
         let lista = todas.filter(m => m.status === "Concluída" || m.status === "Cancelada");
 
-        // Filtro local por número do chamado e demais campos
+        // Filtro local por número do chamado, equipamento, técnico ou problema
         if (search) {
             const s = search.toLowerCase();
             lista = lista.filter(m =>
