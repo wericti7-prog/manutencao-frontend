@@ -158,8 +158,15 @@ async function loadManutencoes() {
 
         let lista = await api.listarManutencoes(params);
 
-        // Se não há filtro de status específico, remove as finalizadas
-        if (!st) {
+        // Filtra localmente também pelo número do atendimento (não enviado à API)
+        if (search) {
+            lista = lista.filter(m =>
+                (m.numero || "").toLowerCase().includes(search) ||
+                (m.equipamento || "").toLowerCase().includes(search) ||
+                (m.tecnico || "").toLowerCase().includes(search) ||
+                (m.problema || "").toLowerCase().includes(search)
+            );
+        }
             lista = lista.filter(m => m.status !== "Concluída" && m.status !== "Cancelada");
         }
 
@@ -267,7 +274,7 @@ async function salvarManutencao(finalizar, resultadoReparo) {
 }
 
 window.finalizarAtendimento = function() {
-    const campos = ["manutencaoEquipamento","manutencaoTipo","manutencaoDataInicio","manutencaoTecnico","manutencaoProblema"];
+    const campos = ["manutencaoEquipamento","manutencaoTipo","manutencaoDataInicio","manutencaoTecnico"];
     for (const fid of campos) {
         if (!document.getElementById(fid).value.trim()) {
             document.getElementById(fid).focus();
