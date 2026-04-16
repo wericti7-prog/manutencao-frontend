@@ -158,13 +158,14 @@ async function loadManutencoes() {
 
         let lista = await api.listarManutencoes(params);
 
-        // Filtra localmente também pelo número do atendimento (não enviado à API)
+        // Filtra localmente pelo número do chamado e demais campos
         if (search) {
+            const s = search.toLowerCase();
             lista = lista.filter(m =>
-                (m.numero || "").toLowerCase().includes(search) ||
-                (m.equipamento || "").toLowerCase().includes(search) ||
-                (m.tecnico || "").toLowerCase().includes(search) ||
-                (m.problema || "").toLowerCase().includes(search)
+                (m.numero    || "").toString().toLowerCase().includes(s) ||
+                (m.equipamento || "").toLowerCase().includes(s) ||
+                (m.tecnico   || "").toLowerCase().includes(s) ||
+                (m.problema  || "").toLowerCase().includes(s)
             );
         }
 
@@ -437,7 +438,18 @@ async function loadFinalizados() {
 
         const todas = await api.listarManutencoes(params);
         // Filtra localmente só as finalizadas
-        const lista = todas.filter(m => m.status === "Concluída" || m.status === "Cancelada");
+        let lista = todas.filter(m => m.status === "Concluída" || m.status === "Cancelada");
+
+        // Filtro local por número do chamado e demais campos
+        if (search) {
+            const s = search.toLowerCase();
+            lista = lista.filter(m =>
+                (m.numero      || "").toString().toLowerCase().includes(s) ||
+                (m.equipamento || "").toLowerCase().includes(s) ||
+                (m.tecnico     || "").toLowerCase().includes(s) ||
+                (m.problema    || "").toLowerCase().includes(s)
+            );
+        }
         if (!lista.length) {
             document.getElementById("listaFinalizados").innerHTML =
                 '<div class="empty-state"><h3>Nenhuma manutenção finalizada</h3></div>';
