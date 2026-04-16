@@ -54,7 +54,7 @@
                 </div>
                 <div class="stat-card">
                     <span class="stat-number" id="totalPendentes">0</span>
-                    <span class="stat-label">Pendentes</span>
+                    <span class="stat-label">Ag. Aprovação</span>
                 </div>
                 <!-- Usuário logado -->
                 <div class="stat-card usuario-card">
@@ -116,12 +116,8 @@
                 </select>
                 <select id="filterStatusManutencao" class="filter-select">
                     <option value="">Todos os Status</option>
-
-                    <option value="Operacional">Operacional</option>
-                    <option value="Em Manutenção">Em Manutenção</option>
-                    <option value="Aguardando Peças">Aguardando Peças</option>
-                    <option value="Aguardando aprovação">Aguardando aprovação</option>
-                    <option value="Fora de Operação">Fora de Operação</option>
+                    <option value="Pendente">Pendente</option>
+                    <option value="Em Andamento">Em Andamento</option>
                 </select>
             </div>
             <div id="listaManutencoes" class="table-container"></div>
@@ -230,6 +226,8 @@
                             <label>Perfil</label>
                             <select id="novoRole" class="form-control">
                                 <option value="tecnico">Técnico</option>
+                                <option value="manutencao">Manutenção</option>
+                                <option value="observador">Observador</option>
                                 <option value="gerencia">Gerência</option>
                             </select>
                         </div>
@@ -339,7 +337,6 @@
                             <option value="Operacional">Operacional</option>
                             <option value="Em Manutenção">Em Manutenção</option>
                             <option value="Aguardando Peças">Aguardando Peças</option>
-                            <option value="Aguardando aprovação">Aguardando aprovação</option>
                             <option value="Fora de Operação">Fora de Operação</option>
                         </select>
                     </div>

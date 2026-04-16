@@ -10,7 +10,6 @@ function getStatusBadge(s) {
         "Operacional":      "badge-operacional",
         "Em Manutenção":    "badge-em-manutencao",
         "Aguardando Peças": "badge-aguardando-pecas",
-        "Aguardando aprovação": "badge-warning",
         "Fora de Operação": "badge-fora-operacao",
         "Pendente":         "badge-warning",
         "Em Andamento":     "badge-info",
@@ -31,9 +30,14 @@ function mostrarApp() {
     document.getElementById("appPrincipal").style.display = "block";
     document.getElementById("usuarioNome").textContent    = u.nome;
     document.getElementById("usuarioAvatar").textContent  = u.nome.charAt(0).toUpperCase();
-    // Mostra menu de usuários só para gerência/admin
+    // Controle de permissões por perfil
     const menuUsuarios = document.getElementById("menuUsuarios");
-    if (menuUsuarios) menuUsuarios.style.display = u.role !== "tecnico" ? "block" : "none";
+    if (menuUsuarios) menuUsuarios.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
+
+    // Botão Nova Manutenção: oculto para observador
+    const btnNova = document.getElementById("btnNovaManutencao");
+    if (btnNova) btnNova.style.display = u.role === "observador" ? "none" : "inline-flex";
+
     updateStats();
     loadManutencoes();
 }
@@ -90,7 +94,7 @@ async function updateStats() {
         const todas = await api.listarManutencoes();
         const abertas     = todas.filter(m => m.status !== "Concluída" && m.status !== "Cancelada");
         const finalizadas = todas.filter(m => m.status === "Concluída" || m.status === "Cancelada");
-        const pendentes   = abertas.filter(m => m.status === "Pendente");
+        const pendentes   = abertas.filter(m => m.status === "Aguardando aprovação");
         document.getElementById("totalManutencoes").textContent = abertas.length;
         document.getElementById("totalFinalizados").textContent = finalizadas.length;
         document.getElementById("totalPendentes").textContent   = pendentes.length;
@@ -166,8 +170,18 @@ async function loadManutencoes() {
             return;
         }
 
-        const rows = lista.map(m => `
-            <tr>
+        const userRole = api.getUsuarioLogado()?.role || "";
+        const rows = lista.map(m => {
+            // observador: só histórico
+            // manutencao: histórico + editar (sem excluir, sem criar)
+            // tecnico/gerencia/admin: tudo
+            const podeEditar  = !["observador"].includes(userRole);
+            const podeExcluir = ["tecnico","gerencia","admin"].includes(userRole);
+            const acoes = `
+                <button class="btn-icon btn-history" onclick="verHistorico(${m.id})" title="Histórico">📋</button>
+                ${podeEditar  ? `<button class="btn-icon btn-edit"   onclick="editManutencao(${m.id})" title="Editar">✏️</button>` : ""}
+                ${podeExcluir ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}`;
+            return `<tr>
                 <td><span class="id-badge">${m.numero}</span></td>
                 <td><button class="link-equipamento" onclick="verDetalhes(${m.id})">${m.equipamento}</button></td>
                 <td>${m.localizacao || "-"}</td>
@@ -175,14 +189,9 @@ async function loadManutencoes() {
                 <td class="problema-cell">${(m.problema || "-").substring(0,60)}${(m.problema||"").length>60?"…":""}</td>
                 <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
                 <td>${formatCurrency(m.custo)}</td>
-                <td>
-                    <div class="action-buttons">
-                        <button class="btn-icon btn-history" onclick="verHistorico(${m.id})" title="Histórico">📋</button>
-                        <button class="btn-icon btn-edit"    onclick="editManutencao(${m.id})" title="Editar">✏️</button>
-                        <button class="btn-icon btn-delete"  onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>
-                    </div>
-                </td>
-            </tr>`).join("");
+                <td><div class="action-buttons">${acoes}</div></td>
+            </tr>`;
+        }).join("");
 
         document.getElementById("listaManutencoes").innerHTML = `
             <table>
@@ -278,6 +287,8 @@ document.getElementById("btnResultadoSemReparo").addEventListener("click", () =>
 });
 
 window.editManutencao = async function(id) {
+    const userRole = api.getUsuarioLogado()?.role || "";
+    if (userRole === "observador") return; // observador não edita
     try {
         const m = await api.getManutencao(id);
         document.getElementById("manutencaoId").value          = m.id;
@@ -293,7 +304,18 @@ window.editManutencao = async function(id) {
         document.getElementById("manutencaoCusto").value       = m.custo     || 0;
         document.getElementById("manutencaoPecas").value       = m.pecas     || "";
         document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${m.numero}`;
-        document.getElementById("btnFinalizar").style.display  = "inline-flex";
+
+        // Perfil "manutencao": bloqueia campos que ele não pode alterar
+        const bloqueados = ["manutencaoEquipamento","manutencaoTipo",
+                            "manutencaoDataInicio","manutencaoDataFim","manutencaoTecnico"];
+        bloqueados.forEach(fid => {
+            const el = document.getElementById(fid);
+            if (el) el.disabled = (userRole === "manutencao");
+        });
+
+        // Perfil "manutencao" não pode finalizar nem excluir
+        document.getElementById("btnFinalizar").style.display =
+            userRole === "manutencao" ? "none" : "inline-flex";
         document.getElementById("tecnicoAutoTag").style.display = "none";
         populateDatalist();
         openModal("modalManutencao");
@@ -414,6 +436,7 @@ async function loadFinalizados() {
         }
         const custoTotal = lista.reduce((s, m) => s + (m.custo || 0), 0);
         const rows = lista.map(m => {
+            const st = m.status_equipamento || m.status;
             return `<tr>
                 <td><span class="id-badge">${m.numero}</span></td>
                 <td><button class="link-equipamento" onclick="verDetalhes(${m.id})">${m.equipamento}</button></td>
@@ -421,6 +444,7 @@ async function loadFinalizados() {
                 <td>${m.tecnico || "-"}</td>
                 <td>${formatDateTime(m.data_inicio)}</td>
                 <td>${formatDateTime(m.data_fim)}</td>
+                <td><span class="badge ${getStatusBadge(st)}">${st}</span></td>
                 <td>${m.resultado_reparo ? `<span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span>` : "—"}</td>
                 <td>${formatCurrency(m.custo)}</td>
                 <td><button class="btn-icon btn-history" onclick="verHistorico(${m.id})" title="Histórico">📋</button></td>
@@ -429,11 +453,11 @@ async function loadFinalizados() {
         document.getElementById("listaFinalizados").innerHTML = `
             <table>
                 <thead><tr><th>Nº</th><th>Equipamento</th><th>Localização</th><th>Técnico</th>
-                    <th>Início</th><th>Conclusão</th><th>Reparo</th><th>Custo</th><th>Hist.</th>
+                    <th>Início</th><th>Conclusão</th><th>Status Equip.</th><th>Reparo</th><th>Custo</th><th>Hist.</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
                 <tfoot><tr>
-                    <td colspan="7" style="text-align:right;font-weight:600;padding:12px 15px">Custo Total:</td>
+                    <td colspan="8" style="text-align:right;font-weight:600;padding:12px 15px">Custo Total:</td>
                     <td style="font-weight:700;color:var(--primary-color);padding:12px 15px">${formatCurrency(custoTotal)}</td>
                     <td></td>
                 </tr></tfoot>
@@ -482,7 +506,14 @@ async function loadUsuarios() {
             <tr>
                 <td>${u.nome}</td>
                 <td>${u.username}</td>
-                <td><span class="badge ${u.role==="gerencia"?"badge-info":"badge-secondary"}">${u.role}</span></td>
+                <td><span class="badge ${
+                {gerencia:"badge-info", admin:"badge-info",
+                 manutencao:"badge-warning", observador:"badge-secondary",
+                 tecnico:"badge-secondary"}[u.role] || "badge-secondary"
+            }">${
+                {gerencia:"Gerência", admin:"Admin", manutencao:"Manutenção",
+                 observador:"Observador", tecnico:"Técnico"}[u.role] || u.role
+            }</span></td>
                 <td>${formatDate(u.criado_em)}</td>
                 <td><button class="btn-icon btn-delete" onclick="removeUsuario(${u.id}, '${u.username}')">🗑️</button></td>
             </tr>`).join("");
