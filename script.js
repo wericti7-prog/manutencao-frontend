@@ -246,7 +246,7 @@ async function salvarManutencao(finalizar, resultadoReparo) {
         localizacao: document.getElementById("manutencaoTipo").value,
         tecnico:     document.getElementById("manutencaoTecnico").value,
         status:      document.getElementById("manutencaoStatus").value,
-        problema:    document.getElementById("manutencaoProblema").value,
+        problema:    document.getElementById("manutencaoProblema").value.trim() || "Não informado",
         solucao:     document.getElementById("manutencaoSolucao").value,
         custo:       parseFloat(document.getElementById("manutencaoCusto").value) || 0,
         pecas:       document.getElementById("manutencaoPecas").value,
