@@ -7,16 +7,17 @@ const formatCurrency = v => new Intl.NumberFormat("pt-BR", { style: "currency", 
 
 function getStatusBadge(s) {
     const map = {
-        "Operacional":      "badge-operacional",
-        "Em Manutenção":    "badge-em-manutencao",
-        "Aguardando Peças": "badge-aguardando-pecas",
-        "Fora de Operação": "badge-fora-operacao",
-        "Pendente":         "badge-warning",
-        "Em Andamento":     "badge-info",
-        "Concluída":        "badge-success",
-        "Cancelada":        "badge-secondary",
-        "Consertado":       "badge-success",
-        "Sem Reparo":       "badge-danger",
+        "Operacional":           "badge-operacional",
+        "Em Manutenção":         "badge-em-manutencao",
+        "Aguardando Peças":      "badge-aguardando-pecas",
+        "Fora de Operação":      "badge-fora-operacao",
+        "Pendente":              "badge-warning",
+        "Em Andamento":          "badge-info",
+        "Aguardando aprovação":  "badge-warning",
+        "Concluída":             "badge-success",
+        "Cancelada":             "badge-secondary",
+        "Consertado":            "badge-success",
+        "Sem Reparo":            "badge-danger",
     };
     return map[s] || "badge-secondary";
 }
@@ -436,7 +437,6 @@ async function loadFinalizados() {
         }
         const custoTotal = lista.reduce((s, m) => s + (m.custo || 0), 0);
         const rows = lista.map(m => {
-            const st = m.status_equipamento || m.status;
             return `<tr>
                 <td><span class="id-badge">${m.numero}</span></td>
                 <td><button class="link-equipamento" onclick="verDetalhes(${m.id})">${m.equipamento}</button></td>
@@ -444,7 +444,6 @@ async function loadFinalizados() {
                 <td>${m.tecnico || "-"}</td>
                 <td>${formatDateTime(m.data_inicio)}</td>
                 <td>${formatDateTime(m.data_fim)}</td>
-                <td><span class="badge ${getStatusBadge(st)}">${st}</span></td>
                 <td>${m.resultado_reparo ? `<span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span>` : "—"}</td>
                 <td>${formatCurrency(m.custo)}</td>
                 <td><button class="btn-icon btn-history" onclick="verHistorico(${m.id})" title="Histórico">📋</button></td>
@@ -453,11 +452,11 @@ async function loadFinalizados() {
         document.getElementById("listaFinalizados").innerHTML = `
             <table>
                 <thead><tr><th>Nº</th><th>Equipamento</th><th>Localização</th><th>Técnico</th>
-                    <th>Início</th><th>Conclusão</th><th>Status Equip.</th><th>Reparo</th><th>Custo</th><th>Hist.</th>
+                    <th>Início</th><th>Conclusão</th><th>Reparo</th><th>Custo</th><th>Hist.</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
                 <tfoot><tr>
-                    <td colspan="8" style="text-align:right;font-weight:600;padding:12px 15px">Custo Total:</td>
+                    <td colspan="7" style="text-align:right;font-weight:600;padding:12px 15px">Custo Total:</td>
                     <td style="font-weight:700;color:var(--primary-color);padding:12px 15px">${formatCurrency(custoTotal)}</td>
                     <td></td>
                 </tr></tfoot>
