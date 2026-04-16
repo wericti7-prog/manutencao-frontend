@@ -167,6 +167,9 @@ async function loadManutencoes() {
                 (m.problema || "").toLowerCase().includes(search)
             );
         }
+
+        // Se não há filtro de status específico, remove as finalizadas
+        if (!st) {
             lista = lista.filter(m => m.status !== "Concluída" && m.status !== "Cancelada");
         }
 
