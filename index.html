@@ -80,7 +80,7 @@
                 <button class="btn btn-primary" id="btnNovaManutencao">➕ Nova Manutenção</button>
             </div>
             <div class="filters">
-                <input type="text" id="searchManutencao" placeholder="Buscar por equipamento, técnico ou problema..." class="search-input">
+                <input type="text" id="searchManutencao" placeholder="Buscar por Nº, equipamento, técnico ou problema..." class="search-input">
                 <select id="filterTipoManutencao" class="filter-select">
                     <option value="">Todas as Localizações</option>
                     <option value="Loja 001">Loja 001</option>
@@ -132,7 +132,7 @@
                 <h2>Manutenções Finalizadas</h2>
             </div>
             <div class="filters">
-                <input type="text" id="searchFinalizado" placeholder="Buscar manutenção finalizada..." class="search-input">
+                <input type="text" id="searchFinalizado" placeholder="Buscar por Nº, equipamento, técnico ou problema..." class="search-input">
                 <select id="filterTipoFinalizado" class="filter-select">
                     <option value="">Todas as Localizações</option>
                     <option value="Loja 001">Loja 001</option>
@@ -347,8 +347,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="manutencaoProblema">Descrição do Problema</label>
-                    <textarea id="manutencaoProblema" class="form-control" rows="3"></textarea>
+                    <label for="manutencaoProblema">Descrição do Problema *</label>
+                    <textarea id="manutencaoProblema" class="form-control" rows="3" required></textarea>
                 </div>
                 <div class="form-group">
                     <label for="manutencaoSolucao">Solução Aplicada</label>
