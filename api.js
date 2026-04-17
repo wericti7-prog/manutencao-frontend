@@ -123,6 +123,25 @@ export function finalizarManutencao(id, data) {
 
 export function getSugestoes() { return apiFetch("/equipamentos/sugestoes"); }
 
+// ─── ANEXOS ───────────────────────────────────────────────────────────────────
+export function listarAnexos(manutencaoId) {
+    return apiFetch(`/manutencoes/${manutencaoId}/anexos`);
+}
+
+export function adicionarAnexo(manutencaoId, arquivo) {
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+    return apiFetch(`/manutencoes/${manutencaoId}/anexos`, {
+        method:  "POST",
+        headers: { "Authorization": storage.getToken() ? `Bearer ${storage.getToken()}` : "" },
+        body:    formData,
+    });
+}
+
+export function removerAnexo(manutencaoId, anexoId) {
+    return apiFetch(`/manutencoes/${manutencaoId}/anexos/${anexoId}`, { method: "DELETE" });
+}
+
 // ─── USUÁRIOS (gerência) ──────────────────────────────────────────────────────
 export function listarUsuarios()     { return apiFetch("/usuarios"); }
 export function criarUsuario(data)   { return apiFetch("/usuarios",        { method: "POST",   body: JSON.stringify(data) }); }

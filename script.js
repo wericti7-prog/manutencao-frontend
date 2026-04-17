@@ -570,22 +570,11 @@ document.getElementById("formNovoUsuario")?.addEventListener("submit", async e =
 });
 
 // =============================================
-// NOTAS FISCAIS — armazenamento em localStorage
-// Chave: "nf_<manutencaoId>"  →  array de { nome, tipo, tamanho, data, base64 }
+// NOTAS FISCAIS — armazenamento no backend (API)
+// Rota: /manutencoes/{id}/anexos
 // =============================================
 
 const NF_MAX_BYTES = 5 * 1024 * 1024; // 5 MB por arquivo
-
-function nfChave(id) { return `nf_${id}`; }
-
-function nfCarregar(id) {
-    try { return JSON.parse(localStorage.getItem(nfChave(id)) || "[]"); }
-    catch { return []; }
-}
-
-function nfSalvar(id, lista) {
-    localStorage.setItem(nfChave(id), JSON.stringify(lista));
-}
 
 function nfFormatarTamanho(bytes) {
     if (bytes < 1024) return bytes + " B";
@@ -593,11 +582,29 @@ function nfFormatarTamanho(bytes) {
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
 
-// Renderiza a lista de anexos no modal
-function nfRenderizar(id) {
-    const lista  = nfCarregar(id);
-    const el     = document.getElementById("nfLista");
+function nfIcone(tipo) {
+    if (tipo.includes("pdf"))   return "📄";
+    if (tipo.includes("image")) return "🖼️";
+    if (tipo.includes("word") || tipo.includes("document")) return "📝";
+    if (tipo.includes("sheet") || tipo.includes("excel"))   return "📊";
+    return "📎";
+}
+
+// Busca anexos do backend
+async function nfCarregar(id) {
+    try {
+        const lista = await api.listarAnexos(id);
+        return lista || [];
+    } catch { return []; }
+}
+
+// Renderiza a lista de anexos no modal (agora async)
+async function nfRenderizar(id) {
+    const el = document.getElementById("nfLista");
     if (!el) return;
+    el.innerHTML = "<p class='nf-vazio'>Carregando anexos...</p>";
+
+    const lista = await nfCarregar(id);
 
     if (!lista.length) {
         el.innerHTML = "<p class='nf-vazio'>Nenhum anexo adicionado.</p>";
@@ -614,25 +621,15 @@ function nfRenderizar(id) {
             <div class="nf-acoes">
                 <button class="btn-nf btn-nf-ver"      onclick="nfVisualizar(${i},'${id}')" title="Visualizar">👁️</button>
                 <button class="btn-nf btn-nf-baixar"   onclick="nfBaixar(${i},'${id}')"    title="Download">⬇️</button>
-                <button class="btn-nf btn-nf-remover"  onclick="nfRemover(${i},'${id}')"   title="Remover">🗑️</button>
+                <button class="btn-nf btn-nf-remover"  onclick="nfRemover(${arq.id},'${id}')"   title="Remover">🗑️</button>
             </div>
         </div>`).join("");
 }
 
-function nfIcone(tipo) {
-    if (tipo.includes("pdf"))   return "📄";
-    if (tipo.includes("image")) return "🖼️";
-    if (tipo.includes("word") || tipo.includes("document")) return "📝";
-    if (tipo.includes("sheet") || tipo.includes("excel"))   return "📊";
-    return "📎";
-}
-
-// Adiciona arquivos escolhidos pelo input
+// Adiciona arquivos — envia para o backend
 window.nfAdicionarArquivos = function(files) {
     const id = document.getElementById("manutencaoId").value;
     if (!id) { alert("Salve a manutenção antes de adicionar anexos."); return; }
-
-    const lista = nfCarregar(id);
 
     Array.from(files).forEach(file => {
         if (file.size > NF_MAX_BYTES) {
@@ -640,21 +637,23 @@ window.nfAdicionarArquivos = function(files) {
             return;
         }
         const reader = new FileReader();
-        reader.onload = e => {
-            lista.push({
-                nome:    file.name,
-                tipo:    file.type,
-                tamanho: file.size,
-                data:    new Date().toLocaleDateString("pt-BR"),
-                base64:  e.target.result,
-            });
-            nfSalvar(id, lista);
-            nfRenderizar(id);
+        reader.onload = async e => {
+            try {
+                await api.adicionarAnexo(id, {
+                    nome:    file.name,
+                    tipo:    file.type,
+                    tamanho: file.size,
+                    data:    new Date().toLocaleDateString("pt-BR"),
+                    base64:  e.target.result,
+                });
+                nfRenderizar(id);
+            } catch (err) {
+                alert("Erro ao salvar anexo: " + err.message);
+            }
         };
         reader.readAsDataURL(file);
     });
 
-    // Limpa o input para permitir re-seleção do mesmo arquivo
     document.getElementById("nfInput").value = "";
 };
 
@@ -673,8 +672,9 @@ document.getElementById("nfDropzone")?.addEventListener("drop", e => {
 });
 
 // Visualizar: abre em nova aba
-window.nfVisualizar = function(i, id) {
-    const arq = nfCarregar(id)[i];
+window.nfVisualizar = async function(i, id) {
+    const lista = await nfCarregar(id);
+    const arq = lista[i];
     if (!arq) return;
     const win = window.open();
     if (arq.tipo.includes("image")) {
@@ -685,8 +685,9 @@ window.nfVisualizar = function(i, id) {
 };
 
 // Download
-window.nfBaixar = function(i, id) {
-    const arq = nfCarregar(id)[i];
+window.nfBaixar = async function(i, id) {
+    const lista = await nfCarregar(id);
+    const arq = lista[i];
     if (!arq) return;
     const a = document.createElement("a");
     a.href     = arq.base64;
@@ -694,18 +695,23 @@ window.nfBaixar = function(i, id) {
     a.click();
 };
 
-// Remover
-window.nfRemover = function(i, id) {
-    if (!confirm(`Remover "${nfCarregar(id)[i]?.nome}"?`)) return;
-    const lista = nfCarregar(id);
-    lista.splice(i, 1);
-    nfSalvar(id, lista);
-    nfRenderizar(id);
+// Remover — deleta no backend pelo ID do anexo
+window.nfRemover = async function(anexoId, manutencaoId) {
+    const lista = await nfCarregar(manutencaoId);
+    const arq = lista.find(a => a.id === anexoId);
+    if (!confirm(`Remover "${arq?.nome || "este anexo"}"?`)) return;
+    try {
+        await api.removerAnexo(manutencaoId, anexoId);
+        nfRenderizar(manutencaoId);
+    } catch (err) {
+        alert("Erro ao remover anexo: " + err.message);
+    }
 };
 
-// Mostra contagem de anexos na aba de detalhes
-function nfContagem(id) {
-    const n = nfCarregar(id).length;
+// Mostra contagem de anexos (agora async)
+async function nfContagem(id) {
+    const lista = await nfCarregar(id);
+    const n = lista.length;
     return n ? `<span class="nf-badge">${n} anexo${n > 1 ? "s" : ""}</span>` : "";
 }
 
