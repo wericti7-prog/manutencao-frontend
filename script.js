@@ -302,7 +302,7 @@ window.editManutencao = async function(id) {
     const userRole = api.getUsuarioLogado()?.role || "";
     if (userRole === "observador") return; // observador não edita
     try {
-        const m = await api.getManutencao(id);
+        const [m, anexos] = await Promise.all([api.getManutencao(id), api.listarAnexos(id).catch(() => [])]);
         document.getElementById("manutencaoId").value          = m.id;
         document.getElementById("manutencaoNumero").value      = m.numero;
         document.getElementById("manutencaoEquipamento").value = m.equipamento || "";
@@ -374,6 +374,9 @@ window.verDetalhes = async function(id) {
             </div>
             <div style="margin-top:16px;text-align:right">
                 <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verHistorico(${m.id})">📋 Ver histórico de edições</button>
+            </div>
+            ${nfHtmlSomenteLeitura(anexos, String(m.id))}
+            <div style="display:none"><!-- fim -->
             </div>`;
         openModal("modalDetalhes");
     } catch (err) { showError(err.message); }
@@ -381,7 +384,7 @@ window.verDetalhes = async function(id) {
 
 window.verHistorico = async function(id) {
     try {
-        const [m, logs] = await Promise.all([api.getManutencao(id), api.getHistorico(id)]);
+        const [m, logs, anexos] = await Promise.all([api.getManutencao(id), api.getHistorico(id), api.listarAnexos(id).catch(() => [])]);
         const statusEx = m.resultado_reparo || m.status_equipamento || m.status;
 
         const linhaAtual = `<tr style="background:#f0fdf4">
@@ -424,6 +427,9 @@ window.verHistorico = async function(id) {
             </div>
             <div style="margin-top:16px;text-align:right">
                 <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verDetalhes(${m.id})">📄 Ver detalhes completos</button>
+            </div>
+            ${nfHtmlSomenteLeitura(anexos, String(m.id))}
+            <div style="display:none"><!-- fim -->
             </div>`;
         openModal("modalDetalhes");
     } catch (err) { showError(err.message); }
@@ -672,6 +678,28 @@ document.getElementById("nfDropzone")?.addEventListener("drop", e => {
 });
 
 // Visualizar: abre em nova aba
+// Renderiza anexos somente-leitura (histórico / detalhes)
+function nfHtmlSomenteLeitura(lista, id) {
+    if (!lista.length) return "";
+    const itens = lista.map((arq, i) => `
+        <div class="nf-item">
+            <span class="nf-icone">${nfIcone(arq.tipo)}</span>
+            <div class="nf-info">
+                <span class="nf-nome">${arq.nome}</span>
+                <span class="nf-meta">${nfFormatarTamanho(arq.tamanho)} · ${arq.data}</span>
+            </div>
+            <div class="nf-acoes">
+                <button class="btn-nf btn-nf-ver"    onclick="nfVisualizar(${i},'${id}')" title="Visualizar">👁️</button>
+                <button class="btn-nf btn-nf-baixar" onclick="nfBaixar(${i},'${id}')"    title="Download">⬇️</button>
+            </div>
+        </div>`).join("");
+    return `
+        <div style="margin-top:20px">
+            <p><strong>📎 Anexos (${lista.length})</strong></p>
+            <div class="nf-lista" style="margin-top:8px">${itens}</div>
+        </div>`;
+}
+
 window.nfVisualizar = async function(i, id) {
     const lista = await nfCarregar(id);
     const arq = lista[i];
