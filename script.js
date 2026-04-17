@@ -232,6 +232,9 @@ document.getElementById("btnNovaManutencao").addEventListener("click", () => {
     document.getElementById("manutencaoDataInicio").value = now.toISOString().slice(0,16);
     populateDatalist();
     openModal("modalManutencao");
+    // Nova manutenção: limpa área de anexos
+    const nfLista = document.getElementById("nfLista");
+    if (nfLista) nfLista.innerHTML = "<p class='nf-vazio'>Salve primeiro para habilitar anexos.</p>";
 });
 
 document.getElementById("formManutencao").addEventListener("submit", async e => {
@@ -328,6 +331,8 @@ window.editManutencao = async function(id) {
         document.getElementById("tecnicoAutoTag").style.display = "none";
         populateDatalist();
         openModal("modalManutencao");
+        // Carrega anexos deste atendimento
+        nfRenderizar(String(m.id));
     } catch (err) { showError(err.message); }
 };
 
@@ -563,6 +568,146 @@ document.getElementById("formNovoUsuario")?.addEventListener("submit", async e =
         alert("Usuário criado com sucesso!");
     } catch (err) { showError(err.message); }
 });
+
+// =============================================
+// NOTAS FISCAIS — armazenamento em localStorage
+// Chave: "nf_<manutencaoId>"  →  array de { nome, tipo, tamanho, data, base64 }
+// =============================================
+
+const NF_MAX_BYTES = 5 * 1024 * 1024; // 5 MB por arquivo
+
+function nfChave(id) { return `nf_${id}`; }
+
+function nfCarregar(id) {
+    try { return JSON.parse(localStorage.getItem(nfChave(id)) || "[]"); }
+    catch { return []; }
+}
+
+function nfSalvar(id, lista) {
+    localStorage.setItem(nfChave(id), JSON.stringify(lista));
+}
+
+function nfFormatarTamanho(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+// Renderiza a lista de anexos no modal
+function nfRenderizar(id) {
+    const lista  = nfCarregar(id);
+    const el     = document.getElementById("nfLista");
+    if (!el) return;
+
+    if (!lista.length) {
+        el.innerHTML = "<p class='nf-vazio'>Nenhum anexo adicionado.</p>";
+        return;
+    }
+
+    el.innerHTML = lista.map((arq, i) => `
+        <div class="nf-item">
+            <span class="nf-icone">${nfIcone(arq.tipo)}</span>
+            <div class="nf-info">
+                <span class="nf-nome">${arq.nome}</span>
+                <span class="nf-meta">${nfFormatarTamanho(arq.tamanho)} · ${arq.data}</span>
+            </div>
+            <div class="nf-acoes">
+                <button class="btn-nf btn-nf-ver"      onclick="nfVisualizar(${i},'${id}')" title="Visualizar">👁️</button>
+                <button class="btn-nf btn-nf-baixar"   onclick="nfBaixar(${i},'${id}')"    title="Download">⬇️</button>
+                <button class="btn-nf btn-nf-remover"  onclick="nfRemover(${i},'${id}')"   title="Remover">🗑️</button>
+            </div>
+        </div>`).join("");
+}
+
+function nfIcone(tipo) {
+    if (tipo.includes("pdf"))   return "📄";
+    if (tipo.includes("image")) return "🖼️";
+    if (tipo.includes("word") || tipo.includes("document")) return "📝";
+    if (tipo.includes("sheet") || tipo.includes("excel"))   return "📊";
+    return "📎";
+}
+
+// Adiciona arquivos escolhidos pelo input
+window.nfAdicionarArquivos = function(files) {
+    const id = document.getElementById("manutencaoId").value;
+    if (!id) { alert("Salve a manutenção antes de adicionar anexos."); return; }
+
+    const lista = nfCarregar(id);
+
+    Array.from(files).forEach(file => {
+        if (file.size > NF_MAX_BYTES) {
+            alert(`"${file.name}" ultrapassa 5 MB e não foi adicionado.`);
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = e => {
+            lista.push({
+                nome:    file.name,
+                tipo:    file.type,
+                tamanho: file.size,
+                data:    new Date().toLocaleDateString("pt-BR"),
+                base64:  e.target.result,
+            });
+            nfSalvar(id, lista);
+            nfRenderizar(id);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Limpa o input para permitir re-seleção do mesmo arquivo
+    document.getElementById("nfInput").value = "";
+};
+
+// Drag-and-drop na dropzone
+document.getElementById("nfDropzone")?.addEventListener("dragover", e => {
+    e.preventDefault();
+    e.currentTarget.classList.add("nf-drag-over");
+});
+document.getElementById("nfDropzone")?.addEventListener("dragleave", e => {
+    e.currentTarget.classList.remove("nf-drag-over");
+});
+document.getElementById("nfDropzone")?.addEventListener("drop", e => {
+    e.preventDefault();
+    e.currentTarget.classList.remove("nf-drag-over");
+    window.nfAdicionarArquivos(e.dataTransfer.files);
+});
+
+// Visualizar: abre em nova aba
+window.nfVisualizar = function(i, id) {
+    const arq = nfCarregar(id)[i];
+    if (!arq) return;
+    const win = window.open();
+    if (arq.tipo.includes("image")) {
+        win.document.write(`<img src="${arq.base64}" style="max-width:100%">`);
+    } else {
+        win.document.write(`<iframe src="${arq.base64}" style="width:100%;height:100vh;border:none"></iframe>`);
+    }
+};
+
+// Download
+window.nfBaixar = function(i, id) {
+    const arq = nfCarregar(id)[i];
+    if (!arq) return;
+    const a = document.createElement("a");
+    a.href     = arq.base64;
+    a.download = arq.nome;
+    a.click();
+};
+
+// Remover
+window.nfRemover = function(i, id) {
+    if (!confirm(`Remover "${nfCarregar(id)[i]?.nome}"?`)) return;
+    const lista = nfCarregar(id);
+    lista.splice(i, 1);
+    nfSalvar(id, lista);
+    nfRenderizar(id);
+};
+
+// Mostra contagem de anexos na aba de detalhes
+function nfContagem(id) {
+    const n = nfCarregar(id).length;
+    return n ? `<span class="nf-badge">${n} anexo${n > 1 ? "s" : ""}</span>` : "";
+}
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
 document.getElementById("searchManutencao")?.addEventListener("input", loadManutencoes);

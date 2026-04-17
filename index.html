@@ -366,6 +366,19 @@
                     </div>
                 </div>
 
+                <!-- ── Notas Fiscais ── -->
+                <div class="form-group">
+                    <label>Notas Fiscais / Anexos</label>
+                    <div class="nf-dropzone" id="nfDropzone" onclick="document.getElementById('nfInput').click()">
+                        <span class="nf-drop-icon">📎</span>
+                        <span class="nf-drop-text">Clique para anexar ou arraste um arquivo</span>
+                        <span class="nf-drop-sub">PDF, imagem ou documento — máx. 5 MB por arquivo</span>
+                    </div>
+                    <input type="file" id="nfInput" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
+                           multiple style="display:none" onchange="nfAdicionarArquivos(this.files)">
+                    <div id="nfLista" class="nf-lista"></div>
+                </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-modal="modalManutencao">Cancelar</button>
                     <button type="button" class="btn btn-success" id="btnFinalizar" onclick="finalizarAtendimento()">✅ Finalizar Atendimento</button>

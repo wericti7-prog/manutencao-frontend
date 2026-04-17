@@ -465,7 +465,73 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
     .modal-footer .btn { flex: 1; justify-content: center; }
 }
 
-/* ---- Scrollbar ---- */
+/* ---- Notas Fiscais / Anexos ---- */
+.nf-dropzone {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 18px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+.nf-dropzone:hover, .nf-dropzone.nf-drag-over {
+    border-color: var(--primary-color);
+    background: rgba(37,99,235,.04);
+}
+.nf-drop-icon { font-size: 1.5rem; }
+.nf-drop-text { font-size: .9rem; font-weight: 500; color: var(--text-primary); }
+.nf-drop-sub  { font-size: .78rem; color: var(--text-secondary); }
+
+.nf-lista { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+
+.nf-vazio { font-size: .85rem; color: var(--text-secondary); margin: 4px 0 0; }
+
+.nf-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--light-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+.nf-icone { font-size: 1.2rem; flex-shrink: 0; }
+.nf-info  { flex: 1; min-width: 0; }
+.nf-nome  { display: block; font-size: .88rem; font-weight: 500; color: var(--text-primary);
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nf-meta  { display: block; font-size: .76rem; color: var(--text-secondary); margin-top: 1px; }
+.nf-acoes { display: flex; gap: 4px; flex-shrink: 0; }
+
+.btn-nf {
+    padding: 5px 8px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: .82rem;
+    transition: opacity .2s;
+    background: var(--border-color);
+}
+.btn-nf:hover     { opacity: .75; }
+.btn-nf-ver       { background: #dbeafe; }
+.btn-nf-baixar    { background: #d1fae5; }
+.btn-nf-remover   { background: #fee2e2; }
+
+.nf-badge {
+    display: inline-block;
+    background: #dbeafe;
+    color: #1e40af;
+    font-size: .75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: var(--light-bg); }
 ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 5px; }
