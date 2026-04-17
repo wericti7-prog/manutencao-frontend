@@ -347,7 +347,7 @@ window.deleteManutencao = async function(id) {
 // ─── DETALHES + HISTÓRICO ─────────────────────────────────────────────────────
 window.verDetalhes = async function(id) {
     try {
-        const m = await api.getManutencao(id);
+        const [m, anexos] = await Promise.all([api.getManutencao(id), api.listarAnexos(id).catch(() => [])]);
         const statusEx  = m.resultado_reparo || m.status_equipamento || m.status;
         const reparoHtml = m.resultado_reparo
             ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span></div>` : "";
