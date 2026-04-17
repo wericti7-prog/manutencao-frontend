@@ -347,7 +347,7 @@ window.deleteManutencao = async function(id) {
 // ─── DETALHES + HISTÓRICO ─────────────────────────────────────────────────────
 window.verDetalhes = async function(id) {
     try {
-        const [m, anexos] = await Promise.all([api.getManutencao(id), api.listarAnexos(id).catch(() => [])]);
+        const m = await api.getManutencao(id);
         const statusEx  = m.resultado_reparo || m.status_equipamento || m.status;
         const reparoHtml = m.resultado_reparo
             ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span></div>` : "";
@@ -630,6 +630,8 @@ async function nfRenderizar(id) {
                 <button class="btn-nf btn-nf-remover"  onclick="nfRemover(${arq.id},'${id}')"   title="Remover">🗑️</button>
             </div>
         </div>`).join("");
+
+    nfBindTooltips(lista, el);
 }
 
 // Adiciona arquivos — envia para o backend
@@ -677,10 +679,138 @@ document.getElementById("nfDropzone")?.addEventListener("drop", e => {
     window.nfAdicionarArquivos(e.dataTransfer.files);
 });
 
-// Visualizar: abre em nova aba
+// ─── Pop-up de visualização de anexo ─────────────────────────────────────────
+function nfCriarPopup() {
+    if (document.getElementById("nfPopupOverlay")) return;
+    const overlay = document.createElement("div");
+    overlay.id = "nfPopupOverlay";
+    overlay.innerHTML = `
+        <div id="nfPopupBox">
+            <div id="nfPopupHeader">
+                <span id="nfPopupNome"></span>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <button id="nfPopupBaixar" class="btn-nf btn-nf-baixar" title="Download">⬇️ Download</button>
+                    <button id="nfPopupFechar" title="Fechar">✕</button>
+                </div>
+            </div>
+            <div id="nfPopupBody"></div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener("click", e => { if (e.target === overlay) nfFecharPopup(); });
+    document.getElementById("nfPopupFechar").addEventListener("click", nfFecharPopup);
+    document.addEventListener("keydown", nfEscPopup);
+}
+
+function nfEscPopup(e) { if (e.key === "Escape") nfFecharPopup(); }
+
+function nfFecharPopup() {
+    const overlay = document.getElementById("nfPopupOverlay");
+    if (overlay) {
+        overlay.classList.remove("nf-popup-visible");
+        setTimeout(() => overlay.remove(), 200);
+    }
+    document.removeEventListener("keydown", nfEscPopup);
+}
+
+window.nfVisualizar = async function(i, id) {
+    const lista = await nfCarregar(id);
+    const arq = lista[i];
+    if (!arq) return;
+
+    nfCriarPopup();
+    const overlay = document.getElementById("nfPopupOverlay");
+    document.getElementById("nfPopupNome").textContent = arq.nome;
+
+    const body = document.getElementById("nfPopupBody");
+    if (arq.tipo.includes("image")) {
+        body.innerHTML = `<img src="${arq.base64}" alt="${arq.nome}" style="max-width:100%;max-height:75vh;display:block;margin:auto;border-radius:6px">`;
+    } else if (arq.tipo.includes("pdf")) {
+        body.innerHTML = `<iframe src="${arq.base64}" style="width:100%;height:75vh;border:none;border-radius:6px"></iframe>`;
+    } else {
+        body.innerHTML = `
+            <div style="text-align:center;padding:48px 24px;color:var(--text-secondary)">
+                <div style="font-size:3.5rem;margin-bottom:16px">${nfIcone(arq.tipo)}</div>
+                <p style="font-size:1rem;font-weight:500;color:var(--text-primary);margin-bottom:8px">${arq.nome}</p>
+                <p style="font-size:.88rem">Este tipo de arquivo não pode ser visualizado diretamente.<br>Use o botão de download para abrir.</p>
+            </div>`;
+    }
+
+    // Botão de download no popup
+    document.getElementById("nfPopupBaixar").onclick = () => {
+        const a = document.createElement("a");
+        a.href = arq.base64;
+        a.download = arq.nome;
+        a.click();
+    };
+
+    requestAnimationFrame(() => overlay.classList.add("nf-popup-visible"));
+};
+
+// ─── Tooltip de preview ao passar o mouse ────────────────────────────────────
+let nfTooltipTimer = null;
+
+function nfMostrarTooltip(e, arq) {
+    nfRemoverTooltip();
+    nfTooltipTimer = setTimeout(() => {
+        const tip = document.createElement("div");
+        tip.id = "nfTooltip";
+
+        let conteudo = "";
+        if (arq.tipo.includes("image")) {
+            conteudo = `<img src="${arq.base64}" alt="${arq.nome}" style="max-width:220px;max-height:160px;display:block;border-radius:6px;margin-bottom:6px">`;
+        } else {
+            conteudo = `<div style="font-size:2.5rem;text-align:center;margin-bottom:8px">${nfIcone(arq.tipo)}</div>`;
+        }
+
+        tip.innerHTML = `
+            ${conteudo}
+            <div style="font-size:.8rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${arq.nome}</div>
+            <div style="font-size:.73rem;color:var(--text-secondary);margin-top:2px">${nfFormatarTamanho(arq.tamanho)} · ${arq.data}</div>
+            <div style="font-size:.72rem;color:var(--primary-color);margin-top:5px;text-align:center">Clique em 👁️ para visualizar</div>`;
+
+        document.body.appendChild(tip);
+        nfPosicionarTooltip(e, tip);
+    }, 400);
+}
+
+function nfPosicionarTooltip(e, tip) {
+    const margem = 12;
+    let x = e.clientX + margem;
+    let y = e.clientY + margem;
+    const w = tip.offsetWidth  || 240;
+    const h = tip.offsetHeight || 180;
+    if (x + w > window.innerWidth  - margem) x = e.clientX - w - margem;
+    if (y + h > window.innerHeight - margem) y = e.clientY - h - margem;
+    tip.style.left = x + "px";
+    tip.style.top  = y + "px";
+}
+
+function nfRemoverTooltip() {
+    clearTimeout(nfTooltipTimer);
+    const tip = document.getElementById("nfTooltip");
+    if (tip) tip.remove();
+}
+
+// Aplica tooltip em todos os .nf-item da lista
+function nfBindTooltips(lista, containerEl) {
+    const items = containerEl.querySelectorAll(".nf-item");
+    items.forEach((el, i) => {
+        const arq = lista[i];
+        if (!arq) return;
+        el.addEventListener("mouseenter", e => nfMostrarTooltip(e, arq));
+        el.addEventListener("mousemove",  e => {
+            const tip = document.getElementById("nfTooltip");
+            if (tip) nfPosicionarTooltip(e, tip);
+        });
+        el.addEventListener("mouseleave", nfRemoverTooltip);
+    });
+}
+
 // Renderiza anexos somente-leitura (histórico / detalhes)
 function nfHtmlSomenteLeitura(lista, id) {
     if (!lista.length) return "";
+    const uid = "nfSL_" + id;
     const itens = lista.map((arq, i) => `
         <div class="nf-item">
             <span class="nf-icone">${nfIcone(arq.tipo)}</span>
@@ -693,10 +823,15 @@ function nfHtmlSomenteLeitura(lista, id) {
                 <button class="btn-nf btn-nf-baixar" onclick="nfBaixar(${i},'${id}')"    title="Download">⬇️</button>
             </div>
         </div>`).join("");
+    // Após a inserção no DOM, vincula tooltips
+    setTimeout(() => {
+        const container = document.getElementById(uid);
+        if (container) nfBindTooltips(lista, container);
+    }, 0);
     return `
         <div style="margin-top:20px">
             <p><strong>📎 Anexos (${lista.length})</strong></p>
-            <div class="nf-lista" style="margin-top:8px">${itens}</div>
+            <div id="${uid}" class="nf-lista" style="margin-top:8px">${itens}</div>
         </div>`;
 }
 
