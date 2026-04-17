@@ -375,7 +375,7 @@
                         <span class="nf-drop-sub">PDF, imagem ou documento — máx. 5 MB por arquivo</span>
                     </div>
                     <input type="file" id="nfInput" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx,.xls,.xlsx"
-                           multiple style="display:none" onchange="nfAdicionarArquivos(this.files)">
+                           multiple style="display:none" onchange="window.nfAdicionarArquivos(this.files)">
                     <div id="nfLista" class="nf-lista"></div>
                 </div>
 
@@ -422,6 +422,23 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL — Visualizador de Anexo ===== -->
+    <div id="modalAnexo" class="modal modal-anexo-overlay">
+        <div class="modal-content modal-anexo-box">
+            <div class="modal-header modal-anexo-header">
+                <div class="modal-anexo-titulo">
+                    <span id="modalAnexoIcone" class="modal-anexo-icone-titulo"></span>
+                    <span id="modalAnexoNome"></span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                    <button type="button" id="btnModalAnexoBaixar" class="btn btn-secondary" style="padding:7px 14px;font-size:.85rem">⬇️ Download</button>
+                    <span class="close" data-modal="modalAnexo">&times;</span>
+                </div>
+            </div>
+            <div id="modalAnexoBody" class="modal-anexo-body"></div>
         </div>
     </div>
 
