@@ -129,45 +129,22 @@ export function listarAnexos(manutencaoId) {
 }
 
 export async function adicionarAnexo(manutencaoId, arquivo) {
-    const formData = new FormData();
-    formData.append("file", arquivo);          // "file" é o nome padrão do FastAPI — ajuste se necessário
+    // O backend espera JSON com o arquivo em base64
+    const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = () => reject(new Error("Erro ao ler arquivo."));
+        reader.readAsDataURL(arquivo);
+    });
 
-    // NÃO usa apiFetch: evita que authHeaders() force Content-Type: application/json,
-    // o que corromperia o boundary do multipart/form-data.
-    let res;
-    try {
-        res = await fetch(API_BASE + `/manutencoes/${manutencaoId}/anexos`, {
-            method:  "POST",
-            headers: { "Authorization": storage.getToken() ? `Bearer ${storage.getToken()}` : "" },
-            body:    formData,
-        });
-    } catch (e) {
-        throw new Error("Não foi possível conectar ao servidor.");
-    }
-
-    if (res.status === 401) {
-        storage.clearToken();
-        storage.clearUsuario();
-        window.dispatchEvent(new CustomEvent("sessao-expirada"));
-        throw new Error("Sessão expirada. Faça login novamente.");
-    }
-
-    if (res.status === 204) return null;
-
-    if (!res.ok) {
-        let detalhe = `Erro ${res.status}`;
-        try {
-            const err = await res.json();
-            // Loga o body completo do FastAPI para facilitar debug futuro
-            console.error("Detalhe erro anexo:", JSON.stringify(err, null, 2));
-            detalhe = Array.isArray(err.detail)
-                ? err.detail.map(d => `${d.loc?.join(".")}: ${d.msg}`).join(" | ")
-                : err.detail || detalhe;
-        } catch {}
-        throw new Error(detalhe);
-    }
-
-    return res.json();
+    return apiFetch(`/manutencoes/${manutencaoId}/anexos`, {
+        method: "POST",
+        body: JSON.stringify({
+            nome:     arquivo.name,
+            tipo:     arquivo.type,
+            conteudo: base64,
+        }),
+    });
 }
 
 export function removerAnexo(manutencaoId, anexoId) {
