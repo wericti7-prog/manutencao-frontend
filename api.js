@@ -129,6 +129,15 @@ export function listarAnexos(manutencaoId) {
 }
 
 export async function adicionarAnexo(manutencaoId, arquivo) {
+    // Aceita: File/Blob direto, Event (input change), HTMLInputElement ou FileList
+    if (arquivo instanceof Event)                 arquivo = arquivo.target.files[0];
+    else if (arquivo instanceof HTMLInputElement)  arquivo = arquivo.files[0];
+    else if (arquivo instanceof FileList)          arquivo = arquivo[0];
+
+    if (!(arquivo instanceof Blob)) {
+        throw new Error("Nenhum arquivo válido encontrado. Passe event.target.files[0] ou o File diretamente.");
+    }
+
     // O backend espera JSON com o arquivo em base64
     const base64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
