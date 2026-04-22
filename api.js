@@ -1,20 +1,27 @@
-// ─── CONFIGURAÇÃO — substitua pela URL real do seu Railway ────────────────────
-const API_BASE = window.location.hostname === "localhost"
-    ? "http://localhost:8000"
-    : "https://manutencao-backend-production-a072.up.railway.app";
-    
+// ─── STAGING — aponta para o backend de HOMOLOGAÇÃO ──────────────────────────
+// ⚠️  Este arquivo é exclusivo do ambiente de staging.
+//     NÃO substitua o api.js de produção por este arquivo.
+//
+// PASSO ÚNICO: cole a URL do seu backend de staging abaixo:
+const STAGING_URL = "https://manutencao-staging-production.up.railway.app"; // ← edite aqui
 
-// ─── Armazenamento — localStorage persiste entre recarregamentos ──────────────
+// Expõe para o keep-alive no index.html
+window.__STAGING_URL__ = STAGING_URL;
+
+const API_BASE = STAGING_URL;
+
+// ─── localStorage com prefixo "stg_" — nunca conflita com produção ───────────
 const storage = {
-    getToken:    ()  => localStorage.getItem("jwt_token"),
-    setToken:    (t) => localStorage.setItem("jwt_token", t),
-    clearToken:  ()  => localStorage.removeItem("jwt_token"),
-    getUsuario:  ()  => { const s = localStorage.getItem("usuario_logado"); return s ? JSON.parse(s) : null; },
-    setUsuario:  (u) => localStorage.setItem("usuario_logado", JSON.stringify(u)),
-    clearUsuario:()  => localStorage.removeItem("usuario_logado"),
+    getToken:    ()  => localStorage.getItem("stg_jwt_token"),
+    setToken:    (t) => localStorage.setItem("stg_jwt_token", t),
+    clearToken:  ()  => localStorage.removeItem("stg_jwt_token"),
+    getUsuario:  ()  => { const s = localStorage.getItem("stg_usuario_logado"); return s ? JSON.parse(s) : null; },
+    setUsuario:  (u) => localStorage.setItem("stg_usuario_logado", JSON.stringify(u)),
+    clearUsuario:()  => localStorage.removeItem("stg_usuario_logado"),
 };
 
-// ─── Headers padrão com token ─────────────────────────────────────────────────
+// ─── (Restante idêntico ao api.js de produção) ────────────────────────────────
+
 function authHeaders() {
     const token = storage.getToken();
     return {
@@ -23,7 +30,6 @@ function authHeaders() {
     };
 }
 
-// ─── Fetch central com tratamento de erro ─────────────────────────────────────
 async function apiFetch(path, options = {}) {
     let res;
     try {
@@ -32,17 +38,15 @@ async function apiFetch(path, options = {}) {
             ...options,
         });
     } catch (e) {
-        // Falha de rede — backend inacessível ou URL errada
         throw new Error(
-            "Não foi possível conectar ao servidor. " +
-            "Verifique se a URL do Railway em api.js está correta."
+            "Não foi possível conectar ao servidor de STAGING. " +
+            "Verifique se a URL em staging/api.js está correta e se o backend está ativo."
         );
     }
 
     if (res.status === 401) {
         storage.clearToken();
         storage.clearUsuario();
-        // Dispara evento para o script.js tratar sem referência circular
         window.dispatchEvent(new CustomEvent("sessao-expirada"));
         throw new Error("Sessão expirada. Faça login novamente.");
     }
@@ -51,17 +55,13 @@ async function apiFetch(path, options = {}) {
 
     if (!res.ok) {
         let detalhe = `Erro ${res.status}`;
-        try {
-            const err = await res.json();
-            detalhe = err.detail || detalhe;
-        } catch {}
+        try { const err = await res.json(); detalhe = err.detail || detalhe; } catch {}
         throw new Error(detalhe);
     }
 
     return res.json();
 }
 
-// ─── AUTH ─────────────────────────────────────────────────────────────────────
 export async function login(username, password) {
     const body = new URLSearchParams({ username, password });
     let res;
@@ -73,8 +73,8 @@ export async function login(username, password) {
         });
     } catch (e) {
         throw new Error(
-            "Não foi possível conectar ao servidor. " +
-            "Verifique se a URL do Railway em api.js está correta e se o backend está rodando."
+            "Não foi possível conectar ao servidor de STAGING. " +
+            "Verifique a URL em staging/api.js e se o backend de staging está rodando."
         );
     }
 
@@ -90,20 +90,10 @@ export async function login(username, password) {
     return data;
 }
 
-export function logout() {
-    storage.clearToken();
-    storage.clearUsuario();
-}
+export function logout()           { storage.clearToken(); storage.clearUsuario(); }
+export function getUsuarioLogado() { return storage.getUsuario(); }
+export function isLogado()         { return !!storage.getToken() && !!storage.getUsuario(); }
 
-export function getUsuarioLogado() {
-    return storage.getUsuario();
-}
-
-export function isLogado() {
-    return !!storage.getToken() && !!storage.getUsuario();
-}
-
-// ─── MANUTENÇÕES ──────────────────────────────────────────────────────────────
 export function listarManutencoes(params = {}) {
     const qs = new URLSearchParams(
         Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ""))
@@ -123,24 +113,15 @@ export function finalizarManutencao(id, data) {
 
 export function getSugestoes() { return apiFetch("/equipamentos/sugestoes"); }
 
-// ─── ANEXOS ───────────────────────────────────────────────────────────────────
-export function listarAnexos(manutencaoId) {
-    return apiFetch(`/manutencoes/${manutencaoId}/anexos`);
+export function listarAnexos(manutencaoId)          { return apiFetch(`/manutencoes/${manutencaoId}/anexos`); }
+export function adicionarAnexo(manutencaoId, dados)  {
+    return apiFetch(`/manutencoes/${manutencaoId}/anexos`, { method: "POST", body: JSON.stringify(dados) });
 }
-
-export function adicionarAnexo(manutencaoId, dados) {
-    // dados já vem pronto do script.js: { nome, tipo, tamanho, data, base64 }
-    return apiFetch(`/manutencoes/${manutencaoId}/anexos`, {
-        method: "POST",
-        body:   JSON.stringify(dados),
-    });
-}
-
-export function removerAnexo(manutencaoId, anexoId) {
+export function removerAnexo(manutencaoId, anexoId)  {
     return apiFetch(`/manutencoes/${manutencaoId}/anexos/${anexoId}`, { method: "DELETE" });
 }
 
-// ─── USUÁRIOS (gerência) ──────────────────────────────────────────────────────
-export function listarUsuarios()     { return apiFetch("/usuarios"); }
-export function criarUsuario(data)   { return apiFetch("/usuarios",        { method: "POST",   body: JSON.stringify(data) }); }
-export function excluirUsuario(id)   { return apiFetch(`/usuarios/${id}`,  { method: "DELETE" }); }
+export function listarUsuarios()        { return apiFetch("/usuarios"); }
+export function criarUsuario(data)      { return apiFetch("/usuarios",        { method: "POST",   body: JSON.stringify(data) }); }
+export function editarUsuario(id, data) { return apiFetch(`/usuarios/${id}`,  { method: "PUT",    body: JSON.stringify(data) }); }
+export function excluirUsuario(id)      { return apiFetch(`/usuarios/${id}`,  { method: "DELETE" }); }

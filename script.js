@@ -1,3 +1,4 @@
+// STAGING — importa api.js local desta pasta (staging/api.js)
 import * as api from "./api.js";
 
 // ─── Utilitários ───────────────────────────────────────────────────────────────
@@ -32,6 +33,10 @@ function mostrarApp() {
     // Controle de permissões por perfil
     const menuUsuarios = document.getElementById("menuUsuarios");
     if (menuUsuarios) menuUsuarios.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
+
+    // Aba Relatórios: visível somente para gerencia/admin
+    const menuRelatorios = document.querySelector(".tab-btn[data-tab='relatorios']");
+    if (menuRelatorios) menuRelatorios.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
 
     // Botão Nova Manutenção: oculto para observador
     const btnNova = document.getElementById("btnNovaManutencao");
@@ -543,11 +548,12 @@ async function loadUsuarios() {
                  observador:"Observador", tecnico:"Técnico"}[u.role] || u.role
             }</span></td>
                 <td>${formatDate(u.criado_em)}</td>
-                <td><button class="btn-icon btn-delete" onclick="removeUsuario(${u.id}, '${u.username}')">🗑️</button></td>
+                <td><button class="btn-icon btn-edit" onclick="editarUsuario(${u.id}, '${u.nome}', '${u.username}', '${u.role}')" title="Editar">✏️</button>
+                    <button class="btn-icon btn-delete" onclick="removeUsuario(${u.id}, '${u.username}')">🗑️</button></td>
             </tr>`).join("");
         document.getElementById("listaUsuarios").innerHTML = `
             <table>
-                <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Criado em</th><th>Ação</th></tr></thead>
+                <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Criado em</th><th>Ações</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>`;
     } catch (err) { showError(err.message); }
@@ -558,6 +564,33 @@ window.removeUsuario = async function(id, username) {
     try { await api.excluirUsuario(id); loadUsuarios(); }
     catch (err) { showError(err.message); }
 };
+
+window.editarUsuario = function(id, nome, username, role) {
+    document.getElementById("editUserId").value    = id;
+    document.getElementById("editNome").value      = nome;
+    document.getElementById("editUsername").value  = username;
+    document.getElementById("editRole").value      = role;
+    document.getElementById("editSenha").value     = "";
+    openModal("modalEditarUsuario");
+};
+
+document.getElementById("formEditarUsuario")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = document.getElementById("editUserId").value;
+    const data = {
+        nome:     document.getElementById("editNome").value,
+        username: document.getElementById("editUsername").value,
+        role:     document.getElementById("editRole").value,
+    };
+    const senha = document.getElementById("editSenha").value;
+    if (senha) data.senha = senha;
+    try {
+        await api.editarUsuario(id, data);
+        closeModal("modalEditarUsuario");
+        loadUsuarios();
+        alert("Usuário atualizado com sucesso!");
+    } catch (err) { showError(err.message); }
+});
 
 document.getElementById("formNovoUsuario")?.addEventListener("submit", async e => {
     e.preventDefault();

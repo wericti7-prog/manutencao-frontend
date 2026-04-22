@@ -1,5 +1,10 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/staging/",         "destination": "/staging/index.html" },
+    { "source": "/staging",          "destination": "/staging/index.html" },
+    { "source": "/staging/(.*\\.js)",  "destination": "/staging/$1" },
+    { "source": "/staging/(.*\\.css)", "destination": "/staging/$1" },
+    { "source": "/staging/(.*)",     "destination": "/staging/index.html" },
+    { "source": "/(.*)",             "destination": "/index.html" }
   ]
 }

@@ -808,3 +808,25 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
     border-radius: 12px;
     margin: 24px;
 }
+
+
+/* ═══════════════════════════════════════════════════════════
+   STAGING — Sobrescreve cores para identidade visual laranja
+   ═══════════════════════════════════════════════════════════ */
+:root {
+    --primary-color: #b45309;
+    --primary-dark:  #92400e;
+    --secondary-color: #d97706;
+}
+.header {
+    background: linear-gradient(135deg, #78350f 0%, #b45309 60%, #d97706 100%) !important;
+}
+.tab-btn.active            { color: #b45309 !important; border-bottom-color: #b45309 !important; }
+.tab-btn:hover             { color: #b45309 !important; background-color: rgba(180,83,9,.06) !important; }
+.btn-primary               { background-color: #b45309 !important; }
+.btn-primary:hover         { background-color: #92400e !important; }
+.search-input:focus,
+.filter-select:focus,
+.form-control:focus        { border-color: #b45309 !important; box-shadow: 0 0 0 3px rgba(180,83,9,.15) !important; }
+.link-equipamento          { color: #b45309 !important; }
+.link-equipamento:hover    { color: #92400e !important; }

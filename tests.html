@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧪 Painel de Testes — Sistema de Manutenção</title>
+<style>
+/* ── Reset & Variáveis ─────────────────────────────────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --primary:   #2563eb;
+  --primary-d: #1d4ed8;
+  --success:   #10b981;
+  --danger:    #ef4444;
+  --warning:   #f59e0b;
+  --info:      #6366f1;
+  --bg:        #f1f5f9;
+  --card:      #ffffff;
+  --border:    #e2e8f0;
+  --text:      #0f172a;
+  --muted:     #64748b;
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,.1);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  cursor: default;
+}
+
+button, a, input, select, textarea { cursor: pointer; font-family: inherit; }
+input, select, textarea { cursor: text; }
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+.header {
+  background: linear-gradient(135deg, #1e3a8a 0%, var(--primary) 60%, var(--info) 100%);
+  color: white;
+  padding: 28px 32px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-lg);
+}
+.header-left h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+.header-left p  { opacity: .85; font-size: .9rem; }
+
+.header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.cred-group { display: flex; flex-direction: column; gap: 4px; }
+.cred-group label { font-size: .72rem; opacity: .8; letter-spacing: .5px; text-transform: uppercase; }
+.cred-group input, .cred-group select {
+  padding: 7px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.15);
+  color: white;
+  font-size: .88rem;
+  width: 140px;
+}
+.cred-group input::placeholder { color: rgba(255,255,255,.6); }
+.cred-group select option       { color: var(--text); background: white; }
+
+.btn-login {
+  padding: 8px 20px;
+  background: white;
+  color: var(--primary);
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: .9rem;
+  align-self: flex-end;
+  transition: all .2s;
+  box-shadow: var(--shadow);
+}
+.btn-login:hover { background: #eff6ff; transform: translateY(-1px); }
+
+.status-bar {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: .8rem;
+  font-weight: 600;
+  align-self: flex-end;
+  white-space: nowrap;
+}
+.status-bar.ok      { background: rgba(16,185,129,.25); border:1px solid rgba(16,185,129,.4); }
+.status-bar.fail    { background: rgba(239,68,68,.25);  border:1px solid rgba(239,68,68,.4); }
+.status-bar.idle    { background: rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3); }
+
+/* ── Sumário ───────────────────────────────────────────────────────────────── */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  padding: 24px 32px 0;
+}
+.summary-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  border-top: 4px solid var(--border);
+  transition: transform .2s;
+}
+.summary-card:hover { transform: translateY(-2px); }
+.summary-card.c-total   { border-color: var(--primary); }
+.summary-card.c-pass    { border-color: var(--success); }
+.summary-card.c-fail    { border-color: var(--danger); }
+.summary-card.c-skip    { border-color: var(--warning); }
+.summary-card.c-dur     { border-color: var(--info); }
+.summary-card .num  { font-size: 2rem; font-weight: 800; margin-bottom: 4px; }
+.summary-card .lbl  { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+.c-total .num { color: var(--primary); }
+.c-pass  .num { color: var(--success); }
+.c-fail  .num { color: var(--danger); }
+.c-skip  .num { color: var(--warning); }
+.c-dur   .num { color: var(--info); }
+
+/* ── Toolbar ───────────────────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 32px 0;
+  flex-wrap: wrap;
+}
+.btn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-d); transform: translateY(-1px); }
+.btn-ghost   { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover { background: #f8fafc; }
+.btn-danger  { background: var(--danger); color: white; }
+.btn-danger:hover { opacity: .88; }
+
+.filter-group { display: flex; gap: 6px; margin-left: auto; align-items: center; }
+.filter-group select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: .85rem;
+  background: var(--card);
+}
+.progress-bar-wrap {
+  height: 6px;
+  background: var(--border);
+  border-radius: 10px;
+  margin: 16px 32px 0;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  background: var(--success);
+  border-radius: 10px;
+  transition: width .4s ease;
+  width: 0;
+}
+
+/* ── Grupos de testes ──────────────────────────────────────────────────────── */
+.groups { padding: 20px 32px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+.group-card {
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+  cursor: pointer;
+  user-select: none;
+}
+.group-header:hover { background: #f1f5f9; }
+.group-icon { font-size: 1.3rem; }
+.group-name { font-weight: 700; font-size: 1rem; flex: 1; }
+.group-pill {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: .75rem;
+  font-weight: 700;
+  background: var(--border);
+  color: var(--muted);
+}
+.group-pill.pass { background: #d1fae5; color: #065f46; }
+.group-pill.fail { background: #fee2e2; color: #991b1b; }
+.group-pill.run  { background: #dbeafe; color: #1e40af; }
+.chevron { font-size: .8rem; color: var(--muted); transition: transform .2s; }
+.group-card.collapsed .chevron { transform: rotate(-90deg); }
+.group-card.collapsed .group-body { display: none; }
+
+/* ── Linhas de teste ───────────────────────────────────────────────────────── */
+.test-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background .15s;
+  font-size: .88rem;
+}
+.test-row:last-child { border-bottom: none; }
+.test-row:hover { background: #fafafa; }
+
+.test-icon { font-size: 1rem; text-align: center; }
+.test-name { color: var(--text); font-weight: 500; }
+.test-name small { display: block; font-size: .77rem; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.test-dur  { font-size: .75rem; color: var(--muted); white-space: nowrap; }
+.test-badge {
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: .73rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge-pass { background:#d1fae5; color:#065f46; }
+.badge-fail { background:#fee2e2; color:#991b1b; }
+.badge-skip { background:#fef3c7; color:#92400e; }
+.badge-run  { background:#dbeafe; color:#1e40af; animation: blink 1s infinite; }
+.badge-idle { background:var(--border); color:var(--muted); }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* ── Detalhe de erro ───────────────────────────────────────────────────────── */
+.test-detail {
+  grid-column: 1 / -1;
+  background: #fff7f7;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .8rem;
+  color: #991b1b;
+  font-family: 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-top: 4px;
+  display: none;
+}
+.test-row.has-error .test-detail { display: block; }
+
+/* ── Log ───────────────────────────────────────────────────────────────────── */
+.log-wrap {
+  margin: 0 32px 32px;
+  background: #0f172a;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #1e293b;
+  font-size: .8rem;
+  color: #94a3b8;
+}
+.log-body {
+  padding: 14px 18px;
+  max-height: 260px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: .78rem;
+  color: #e2e8f0;
+  line-height: 1.7;
+}
+.log-body::-webkit-scrollbar { width: 5px; }
+.log-body::-webkit-scrollbar-thumb { background:#334155; border-radius:4px; }
+.log-info    { color: #93c5fd; }
+.log-success { color: #6ee7b7; }
+.log-error   { color: #fca5a5; }
+.log-warn    { color: #fde68a; }
+.log-dim     { color: #475569; }
+</style>
+</head>
+<body>
+
+<!-- ── Header / Login ─────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <h1>🧪 Painel de Testes</h1>
+    <p>Sistema de Manutenção de TI — Supermercado Reis</p>
+  </div>
+  <div class="header-right">
+    <div class="cred-group">
+      <label>Usuário</label>
+      <input id="credUser" placeholder="admin" value="admin">
+    </div>
+    <div class="cred-group">
+      <label>Senha</label>
+      <input id="credPass" type="password" placeholder="senha">
+    </div>
+    <div class="cred-group">
+      <label>Ambiente</label>
+      <select id="credEnv">
+        <option value="https://manutencao-backend-production-a072.up.railway.app">Produção (Railway)</option>
+        <option value="http://localhost:8000">Local (8000)</option>
+      </select>
+    </div>
+    <button class="btn-login" onclick="autenticar()">🔑 Autenticar</button>
+    <span id="statusBar" class="status-bar idle">⬜ Não autenticado</span>
+  </div>
+</div>
+
+<!-- ── Sumário ────────────────────────────────────────────────────────────── -->
+<div class="summary">
+  <div class="summary-card c-total"><div class="num" id="sTotal">0</div><div class="lbl">Total</div></div>
+  <div class="summary-card c-pass" ><div class="num" id="sPass" >0</div><div class="lbl">Passou ✅</div></div>
+  <div class="summary-card c-fail" ><div class="num" id="sFail" >0</div><div class="lbl">Falhou ❌</div></div>
+  <div class="summary-card c-skip" ><div class="num" id="sSkip" >0</div><div class="lbl">Pulado ⚠️</div></div>
+  <div class="summary-card c-dur"  ><div class="num" id="sDur"  >—</div><div class="lbl">Tempo total</div></div>
+</div>
+
+<!-- ── Toolbar ────────────────────────────────────────────────────────────── -->
+<div class="toolbar">
+  <button class="btn btn-primary" onclick="runAll()">▶ Executar todos</button>
+  <button class="btn btn-ghost"   onclick="runGroup(event)">📂 Executar grupo</button>
+  <button class="btn btn-ghost"   onclick="resetAll()">↺ Resetar</button>
+  <div class="filter-group">
+    <select id="filterStatus" onchange="aplicarFiltro()">
+      <option value="">Todos os resultados</option>
+      <option value="fail">Somente falhas</option>
+      <option value="pass">Somente sucessos</option>
+      <option value="skip">Somente pulados</option>
+    </select>
+  </div>
+</div>
+<div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+
+<!-- ── Grupos de teste ────────────────────────────────────────────────────── -->
+<div class="groups" id="groups"></div>
+
+<!-- ── Log ───────────────────────────────────────────────────────────────── -->
+<div class="log-wrap">
+  <div class="log-header">
+    <span>📋 Log de execução</span>
+    <button class="btn btn-ghost" style="padding:3px 10px;font-size:.75rem" onclick="clearLog()">Limpar</button>
+  </div>
+  <div class="log-body" id="logBody"><span class="log-dim">Aguardando execução...</span></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGURAÇÃO
+// ═══════════════════════════════════════════════════════════════════════════
+let API_BASE = document.getElementById("credEnv").value;
+let TOKEN    = null;
+let ROLE     = null;
+// ID de manutenção criada durante os testes (reutilizado entre suítes)
+let _mId = null;
+// ID de anexo criado durante os testes
+let _anexoId = null;
+
+document.getElementById("credEnv").addEventListener("change", e => {
+  API_BASE = e.target.value;
+  log("info", `Ambiente alterado → ${API_BASE}`);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AUTENTICAÇÃO
+// ═══════════════════════════════════════════════════════════════════════════
+async function autenticar() {
+  const user = document.getElementById("credUser").value.trim();
+  const pass = document.getElementById("credPass").value;
+  const bar  = document.getElementById("statusBar");
+  bar.className = "status-bar idle";
+  bar.textContent = "⏳ Autenticando...";
+  log("info", `Autenticando como "${user}" em ${API_BASE}...`);
+  try {
+    const body = new URLSearchParams({ username: user, password: pass });
+    const res  = await fetch(API_BASE + "/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    TOKEN = data.access_token;
+    ROLE  = data.role;
+    bar.className   = "status-bar ok";
+    bar.textContent = `✅ ${data.nome} (${data.role})`;
+    log("success", `Login OK — role: ${data.role}, nome: ${data.nome}`);
+  } catch (e) {
+    TOKEN = null;
+    bar.className   = "status-bar fail";
+    bar.textContent = "❌ Falha no login";
+    log("error", "Falha no login: " + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPER DE REQUESTS
+// ═══════════════════════════════════════════════════════════════════════════
+async function req(method, path, body) {
+  const headers = { "Content-Type": "application/json" };
+  if (TOKEN) headers["Authorization"] = "Bearer " + TOKEN;
+  const opts = { method, headers };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch(API_BASE + path, opts);
+  if (res.status === 204) return null;
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(json?.detail || `HTTP ${res.status}`);
+  return json;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DEFINIÇÃO DOS TESTES
+// ═══════════════════════════════════════════════════════════════════════════
+const SUITE = [
+
+  // ── 1. Conectividade & Auth ─────────────────────────────────────────────
+  {
+    group: "🌐 Conectividade & Autenticação",
+    tests: [
+      {
+        name: "Backend acessível (ping)",
+        desc: "GET /ping deve retornar HTTP 200",
+        run: async () => {
+          const res = await fetch(API_BASE + "/ping");
+          assert(res.ok, `Esperado 200, recebeu ${res.status}`);
+        },
+      },
+      {
+        name: "Login com credenciais válidas",
+        desc: "Deve retornar access_token, nome e role",
+        run: async () => {
+          const user = document.getElementById("credUser").value.trim();
+          const pass = document.getElementById("credPass").value;
+          if (!user || !pass) throw new SkipError("Informe usuário e senha no header");
+          const body = new URLSearchParams({ username: user, password: pass });
+          const res  = await fetch(API_BASE + "/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
+          });
+          const data = await res.json();
+          assert(res.ok,            `Status inesperado: ${res.status}`);
+          assert(data.access_token, "access_token ausente na resposta");
+          assert(data.nome,         "nome ausente na resposta");
+          assert(data.role,         "role ausente na resposta");
+        },
+      },
+      {
+        name: "Login com senha errada",
+        desc: "Deve retornar HTTP 401 com credenciais inválidas",
+        run: async () => {
+          const body = new URLSearchParams({ username: "x", password: "errado123!" });
+          const res  = await fetch(API_BASE + "/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
+          });
+          assert(res.status === 401, `Esperado 401, recebeu ${res.status}`);
+        },
+      },
+      {
+        name: "Rota protegida sem token",
+        desc: "GET /manutencoes sem Authorization deve retornar 401",
+        run: async () => {
+          const res = await fetch(API_BASE + "/manutencoes");
+          assert(res.status === 401, `Esperado 401, recebeu ${res.status}`);
+        },
+      },
+      {
+        name: "Rota protegida com token válido",
+        desc: "GET /manutencoes com token deve retornar array",
+        run: async () => {
+          needToken();
+          const data = await req("GET", "/manutencoes");
+          assert(Array.isArray(data), "Resposta não é um array");
+        },
+      },
+    ],
+  },
+
+  // ── 2. Manutenções — CRUD ───────────────────────────────────────────────
+  {
+    group: "🔧 Manutenções — CRUD",
+    tests: [
+      {
+        name: "Listar manutenções",
+        desc: "GET /manutencoes retorna array com campos esperados",
+        run: async () => {
+          needToken();
+          const lista = await req("GET", "/manutencoes");
+          assert(Array.isArray(lista), "Resposta não é array");
+          if (lista.length > 0) {
+            const m = lista[0];
+            assertCampos(m, ["id","equipamento","status","tecnico"]);
+          }
+        },
+      },
+      {
+        name: "Criar manutenção",
+        desc: "POST /manutencoes deve retornar registro com id e numero",
+        run: async () => {
+          needToken();
+          const payload = {
+            equipamento: "PDV Teste Automatizado",
+            localizacao: "Loja 001",
+            tecnico:     "Teste Script",
+            status:      "Em Manutenção",
+            problema:    "Criado pelo painel de testes",
+            solucao:     "",
+            custo:       0,
+            pecas:       "",
+            data_inicio: new Date().toISOString().slice(0,16),
+            data_fim:    null,
+          };
+          const novo = await req("POST", "/manutencoes", payload);
+          assert(novo.id,     "Campo 'id' ausente");
+          assert(novo.numero, "Campo 'numero' ausente");
+          assert(novo.equipamento === payload.equipamento, "equipamento não bate");
+          _mId = novo.id;
+          log("info", `Manutenção de teste criada — id: ${_mId}, nº: ${novo.numero}`);
+        },
+      },
+      {
+        name: "Buscar manutenção por ID",
+        desc: "GET /manutencoes/{id} retorna objeto correto",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Depende da criação prévia");
+          const m = await req("GET", `/manutencoes/${_mId}`);
+          assert(m.id === _mId, `id esperado ${_mId}, recebeu ${m.id}`);
+          assertCampos(m, ["equipamento","status","tecnico","problema"]);
+        },
+      },
+      {
+        name: "Editar manutenção",
+        desc: "PUT /manutencoes/{id} deve atualizar os campos",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Depende da criação prévia");
+          const update = {
+            equipamento: "PDV Teste Atualizado",
+            localizacao: "Loja 002",
+            tecnico:     "Teste Script",
+            status:      "Aguardando Peças",
+            problema:    "Editado pelo painel",
+            solucao:     "Aguardando peça",
+            custo:       15.50,
+            pecas:       "Cabo USB",
+            data_inicio: new Date().toISOString().slice(0,16),
+            data_fim:    null,
+          };
+          const m = await req("PUT", `/manutencoes/${_mId}`, update);
+          assert(m.equipamento === update.equipamento, "equipamento não atualizado");
+          assert(m.status      === update.status,      "status não atualizado");
+        },
+      },
+      {
+        name: "Filtro por localização",
+        desc: "GET /manutencoes?localizacao=Loja 002 deve filtrar",
+        run: async () => {
+          needToken();
+          const lista = await req("GET", "/manutencoes?localizacao=Loja%20002");
+          assert(Array.isArray(lista), "Resposta não é array");
+          const errado = lista.find(m => m.localizacao !== "Loja 002");
+          assert(!errado, `Item com localização errada: ${errado?.localizacao}`);
+        },
+      },
+      {
+        name: "Histórico de edições",
+        desc: "GET /manutencoes/{id}/historico deve retornar array",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Depende da criação prévia");
+          const logs = await req("GET", `/manutencoes/${_mId}/historico`);
+          assert(Array.isArray(logs), "Esperado array de logs");
+        },
+      },
+      {
+        name: "ID inexistente retorna 404",
+        desc: "GET /manutencoes/9999999 deve retornar 404",
+        run: async () => {
+          needToken();
+          const headers = { Authorization: "Bearer " + TOKEN };
+          const res = await fetch(API_BASE + "/manutencoes/9999999", { headers });
+          assert(res.status === 404, `Esperado 404, recebeu ${res.status}`);
+        },
+      },
+    ],
+  },
+
+  // ── 3. Finalização ─────────────────────────────────────────────────────
+  {
+    group: "✅ Finalização de Atendimento",
+    tests: [
+      {
+        name: "Finalizar como Consertado",
+        desc: "POST /manutencoes/{id}/finalizar deve setar status Concluída",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Depende da criação prévia");
+          const payload = {
+            resultado_reparo:   "Consertado",
+            status_equipamento: "Operacional",
+            solucao:            "Testado pelo painel de testes",
+            custo:              25.00,
+            pecas:              "Cabo de rede",
+          };
+          const m = await req("POST", `/manutencoes/${_mId}/finalizar`, payload);
+          assert(m.status === "Concluída", `status esperado Concluída, recebeu ${m.status}`);
+          assert(m.resultado_reparo === "Consertado", "resultado_reparo incorreto");
+        },
+      },
+      {
+        name: "Manutenção finalizada aparece como Concluída",
+        desc: "GET /manutencoes/{id} deve mostrar status Concluída",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Depende da finalização prévia");
+          const m = await req("GET", `/manutencoes/${_mId}`);
+          assert(m.status === "Concluída", `Esperado Concluída, recebeu ${m.status}`);
+        },
+      },
+    ],
+  },
+
+  // ── 4. Anexos ───────────────────────────────────────────────────────────
+  {
+    group: "📎 Anexos",
+    tests: [
+      {
+        name: "Listar anexos (lista vazia é OK)",
+        desc: "GET /manutencoes/{id}/anexos deve retornar array",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Depende de uma manutenção existente");
+          const lista = await req("GET", `/manutencoes/${_mId}/anexos`);
+          assert(Array.isArray(lista), "Resposta não é array");
+          log("info", `Anexos existentes: ${lista.length}`);
+        },
+      },
+      {
+        name: "Adicionar anexo (base64)",
+        desc: "POST /manutencoes/{id}/anexos deve retornar o anexo criado com id",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Depende de uma manutenção existente");
+          // Cria um PNG mínimo 1x1 em base64
+          const base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+          const payload = {
+            nome:    "teste-painel.png",
+            tipo:    "image/png",
+            tamanho: 68,
+            data:    new Date().toLocaleDateString("pt-BR"),
+            base64,
+          };
+          const anexo = await req("POST", `/manutencoes/${_mId}/anexos`, payload);
+          assert(anexo.id,   "Campo 'id' ausente no retorno do anexo");
+          assert(anexo.nome, "Campo 'nome' ausente no retorno do anexo");
+          _anexoId = anexo.id;
+          log("info", `Anexo criado — id: ${_anexoId}`);
+        },
+      },
+      {
+        name: "Anexo aparece na listagem",
+        desc: "GET /anexos deve conter o anexo recém-criado",
+        run: async () => {
+          needToken();
+          if (!_mId || !_anexoId) throw new SkipError("Depende da criação do anexo");
+          const lista = await req("GET", `/manutencoes/${_mId}/anexos`);
+          const encontrado = lista.find(a => a.id === _anexoId);
+          assert(encontrado, `Anexo id ${_anexoId} não encontrado na listagem`);
+        },
+      },
+      {
+        name: "Remover anexo",
+        desc: "DELETE /manutencoes/{id}/anexos/{anexoId} deve retornar 204",
+        run: async () => {
+          needToken();
+          if (!_mId || !_anexoId) throw new SkipError("Depende da criação do anexo");
+          const headers = { Authorization: "Bearer " + TOKEN };
+          const res = await fetch(API_BASE + `/manutencoes/${_mId}/anexos/${_anexoId}`, {
+            method: "DELETE", headers,
+          });
+          assert(res.status === 204 || res.ok, `Esperado 204, recebeu ${res.status}`);
+          _anexoId = null;
+        },
+      },
+      {
+        name: "Anexo removido não aparece mais",
+        desc: "Listagem de anexos deve estar vazia após remoção",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Depende de uma manutenção");
+          const lista = await req("GET", `/manutencoes/${_mId}/anexos`);
+          const testAnexo = lista.find(a => a.nome === "teste-painel.png");
+          assert(!testAnexo, "Anexo de teste ainda aparece após remoção");
+        },
+      },
+    ],
+  },
+
+  // ── 5. Usuários ─────────────────────────────────────────────────────────
+  {
+    group: "👥 Usuários",
+    tests: [
+      {
+        name: "Listar usuários (requer gerencia/admin)",
+        desc: "GET /usuarios deve retornar lista com campos nome, username, role",
+        run: async () => {
+          needToken();
+          if (!["gerencia","admin"].includes(ROLE)) throw new SkipError("Requer role gerencia ou admin");
+          const lista = await req("GET", "/usuarios");
+          assert(Array.isArray(lista), "Resposta não é array");
+          if (lista.length > 0) assertCampos(lista[0], ["nome","username","role"]);
+        },
+      },
+      {
+        name: "Usuário sem permissão não lista outros usuários",
+        desc: "Roles comuns devem receber 403 ao acessar /usuarios",
+        run: async () => {
+          needToken();
+          if (["gerencia","admin"].includes(ROLE)) throw new SkipError("Só válido para roles sem permissão");
+          const res = await fetch(API_BASE + "/usuarios", {
+            headers: { Authorization: "Bearer " + TOKEN },
+          });
+          assert(res.status === 403, `Esperado 403, recebeu ${res.status}`);
+        },
+      },
+    ],
+  },
+
+  // ── 6. Sugestões de Equipamentos ────────────────────────────────────────
+  {
+    group: "🖥️ Sugestões de Equipamentos",
+    tests: [
+      {
+        name: "GET /equipamentos/sugestoes retorna array de strings",
+        desc: "Autocomplete deve devolver lista de nomes de equipamentos",
+        run: async () => {
+          needToken();
+          const lista = await req("GET", "/equipamentos/sugestoes");
+          assert(Array.isArray(lista), "Resposta não é array");
+          if (lista.length > 0) {
+            assert(typeof lista[0] === "string", "Itens devem ser strings");
+          }
+        },
+      },
+    ],
+  },
+
+  // ── 7. Limpeza ─────────────────────────────────────────────────────────
+  {
+    group: "🗑️ Limpeza pós-teste",
+    tests: [
+      {
+        name: "Excluir manutenção de teste",
+        desc: "DELETE /manutencoes/{id} deve retornar 204",
+        run: async () => {
+          needToken();
+          if (!_mId) throw new SkipError("Nenhuma manutenção de teste para excluir");
+          const headers = { Authorization: "Bearer " + TOKEN };
+          const res = await fetch(API_BASE + `/manutencoes/${_mId}`, {
+            method: "DELETE", headers,
+          });
+          assert(res.status === 204 || res.ok, `Esperado 204, recebeu ${res.status}`);
+          log("info", `Manutenção id ${_mId} excluída`);
+          _mId = null;
+        },
+      },
+      {
+        name: "Manutenção excluída retorna 404",
+        desc: "GET após exclusão deve retornar 404",
+        run: async () => {
+          needToken();
+          // Usa um ID que sabemos que não existe mais
+          const headers = { Authorization: "Bearer " + TOKEN };
+          const res = await fetch(API_BASE + "/manutencoes/9999999", { headers });
+          assert(res.status === 404, `Esperado 404, recebeu ${res.status}`);
+        },
+      },
+    ],
+  },
+
+  // ── 8. Utilitários do Frontend ──────────────────────────────────────────
+  {
+    group: "⚙️ Utilitários do Frontend",
+    tests: [
+      {
+        name: "formatCurrency — valor zero",
+        desc: "0 → 'R$\u00a00,00'",
+        run: () => {
+          const r = formatCurrency(0);
+          assert(r.includes("0,00"), `Resultado inesperado: ${r}`);
+        },
+      },
+      {
+        name: "formatCurrency — valor decimal",
+        desc: "1234.56 deve conter '1.234,56'",
+        run: () => {
+          const r = formatCurrency(1234.56);
+          assert(r.includes("1.234,56"), `Resultado inesperado: ${r}`);
+        },
+      },
+      {
+        name: "formatDate — string ISO",
+        desc: "Data ISO deve formatar para dd/mm/aaaa",
+        run: () => {
+          const r = formatDate("2025-06-15T10:00:00");
+          assert(r.includes("15/06/2025"), `Formatação incorreta: ${r}`);
+        },
+      },
+      {
+        name: "formatDate — valor nulo",
+        desc: "null/undefined deve retornar '-'",
+        run: () => {
+          assert(formatDate(null) === "-",      "null deveria retornar '-'");
+          assert(formatDate(undefined) === "-", "undefined deveria retornar '-'");
+        },
+      },
+      {
+        name: "getStatusBadge — status conhecidos",
+        desc: "Todos os status mapeados devem retornar classe correta",
+        run: () => {
+          const mapa = {
+            "Operacional":      "badge-operacional",
+            "Em Manutenção":    "badge-em-manutencao",
+            "Concluída":        "badge-success",
+            "Cancelada":        "badge-secondary",
+            "Consertado":       "badge-success",
+            "Sem Reparo":       "badge-danger",
+          };
+          for (const [s, cls] of Object.entries(mapa)) {
+            const r = getStatusBadge(s);
+            assert(r === cls, `"${s}" → esperado "${cls}", recebeu "${r}"`);
+          }
+        },
+      },
+      {
+        name: "getStatusBadge — status desconhecido",
+        desc: "Status não mapeado deve retornar 'badge-secondary'",
+        run: () => {
+          const r = getStatusBadge("StatusQueNaoExiste");
+          assert(r === "badge-secondary", `Esperado badge-secondary, recebeu ${r}`);
+        },
+      },
+      {
+        name: "nfFormatarTamanho — bytes",
+        desc: "512 → '512 B'",
+        run: () => {
+          const r = nfFormatarTamanho(512);
+          assert(r === "512 B", `Esperado '512 B', recebeu '${r}'`);
+        },
+      },
+      {
+        name: "nfFormatarTamanho — kilobytes",
+        desc: "2048 → '2.0 KB'",
+        run: () => {
+          const r = nfFormatarTamanho(2048);
+          assert(r.includes("KB"), `Esperado KB, recebeu '${r}'`);
+        },
+      },
+      {
+        name: "nfFormatarTamanho — megabytes",
+        desc: "5 MB deve mostrar 'MB'",
+        run: () => {
+          const r = nfFormatarTamanho(5 * 1024 * 1024);
+          assert(r.includes("MB"), `Esperado MB, recebeu '${r}'`);
+        },
+      },
+      {
+        name: "nfIcone — tipos de arquivo",
+        desc: "Cada mime type retorna o emoji correto",
+        run: () => {
+          assert(nfIcone("application/pdf")   === "📄", "PDF incorreto");
+          assert(nfIcone("image/png")         === "🖼️", "Imagem incorreta");
+          assert(nfIcone("application/vnd.openxmlformats-officedocument.wordprocessingml.document").includes("📝"), "Word incorreto");
+          assert(nfIcone("application/vnd.ms-excel").includes("📊"), "Excel incorreto");
+          assert(nfIcone("application/zip")   === "📎", "Genérico incorreto");
+        },
+      },
+    ],
+  },
+
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FUNÇÕES UTILITÁRIAS DOS TESTES
+// ═══════════════════════════════════════════════════════════════════════════
+class SkipError extends Error { constructor(m) { super(m); this.name = "SkipError"; } }
+
+function assert(cond, msg) {
+  if (!cond) throw new Error(msg || "Asserção falhou");
+}
+function assertCampos(obj, campos) {
+  for (const c of campos) {
+    if (obj[c] === undefined) throw new Error(`Campo obrigatório ausente: "${c}"`);
+  }
+}
+function needToken() {
+  if (!TOKEN) throw new SkipError("Autentique-se primeiro usando o formulário acima");
+}
+
+// Utilitários do frontend (espelhados aqui para teste local)
+const formatDate     = d => d ? new Date(d).toLocaleDateString("pt-BR") : "-";
+const formatDateTime = d => d ? new Date(d).toLocaleString("pt-BR")     : "-";
+const formatCurrency = v => new Intl.NumberFormat("pt-BR", { style:"currency", currency:"BRL" }).format(v || 0);
+
+function getStatusBadge(s) {
+  const map = {
+    "Operacional":"badge-operacional","Em Manutenção":"badge-em-manutencao",
+    "Aguardando Peças":"badge-aguardando-pecas","Fora de Operação":"badge-fora-operacao",
+    "Aguardando aprovação":"badge-warning","Concluída":"badge-success",
+    "Cancelada":"badge-secondary","Consertado":"badge-success","Sem Reparo":"badge-danger",
+  };
+  return map[s] || "badge-secondary";
+}
+
+function nfFormatarTamanho(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + " KB";
+  return (bytes/(1024*1024)).toFixed(1) + " MB";
+}
+function nfIcone(tipo) {
+  if (tipo.includes("pdf"))   return "📄";
+  if (tipo.includes("image")) return "🖼️";
+  if (tipo.includes("word") || tipo.includes("document")) return "📝";
+  if (tipo.includes("sheet") || tipo.includes("excel"))   return "📊";
+  return "📎";
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOG
+// ═══════════════════════════════════════════════════════════════════════════
+function log(type, msg) {
+  const el = document.getElementById("logBody");
+  const time = new Date().toLocaleTimeString("pt-BR");
+  const cls  = { info:"log-info", success:"log-success", error:"log-error", warn:"log-warn" }[type] || "";
+  const pfx  = { info:"ℹ", success:"✔", error:"✘", warn:"⚠" }[type] || "·";
+  if (el.querySelector(".log-dim")) el.innerHTML = "";
+  el.innerHTML += `<span class="${cls}">[${time}] ${pfx} ${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog() {
+  document.getElementById("logBody").innerHTML = '<span class="log-dim">Log limpo.</span>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ESTADO DOS TESTES
+// ═══════════════════════════════════════════════════════════════════════════
+// Estrutura: { status: "idle"|"run"|"pass"|"fail"|"skip", error, ms }
+const STATE = {};
+SUITE.forEach(g => g.tests.forEach((t, i) => {
+  STATE[`${g.group}-${i}`] = { status: "idle", error: null, ms: null };
+}));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════════════
+function renderAll() {
+  const container = document.getElementById("groups");
+  container.innerHTML = "";
+
+  const filterVal = document.getElementById("filterStatus").value;
+
+  let totalPass=0, totalFail=0, totalSkip=0, totalAll=0, totalMs=0;
+
+  SUITE.forEach((g, gi) => {
+    const gTests = g.tests;
+    let gPass=0, gFail=0, gRun=0;
+    gTests.forEach((t, ti) => {
+      const s = STATE[`${g.group}-${ti}`];
+      if (s.status==="pass") gPass++;
+      if (s.status==="fail") gFail++;
+      if (s.status==="run")  gRun++;
+    });
+
+    const card = document.createElement("div");
+    card.className = "group-card";
+    card.id = `group-${gi}`;
+
+    const pillCls = gRun ? "run" : gFail ? "fail" : (gPass===gTests.length ? "pass" : "");
+    const pillTxt = gRun ? "Rodando…" : `${gPass}/${gTests.length}`;
+
+    card.innerHTML = `
+      <div class="group-header" onclick="toggleGroup(${gi})">
+        <span class="group-icon">${g.group.split(" ")[0]}</span>
+        <span class="group-name">${g.group.split(" ").slice(1).join(" ")}</span>
+        <span class="group-pill ${pillCls}">${pillTxt}</span>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="group-body" id="gbody-${gi}"></div>`;
+
+    container.appendChild(card);
+
+    const body = document.getElementById(`gbody-${gi}`);
+
+    gTests.forEach((t, ti) => {
+      const key = `${g.group}-${ti}`;
+      const s   = STATE[key];
+
+      // Aplicar filtro
+      if (filterVal && s.status !== filterVal && s.status !== "run") {
+        // Quando há filtro ativo, só mostra os status correspondentes
+        // (mas sempre mostra durante execução)
+        if (s.status !== "idle" || filterVal !== "") {
+          if (s.status !== filterVal) {
+            // não renderiza esta linha
+            return;
+          }
+        }
+      }
+
+      const icon  = { idle:"⬜", run:"⏳", pass:"✅", fail:"❌", skip:"⚠️" }[s.status] || "⬜";
+      const badge = { idle:"idle", run:"run", pass:"pass", fail:"fail", skip:"skip" }[s.status] || "idle";
+      const label = { idle:"Aguardando", run:"Rodando", pass:"Passou", fail:"Falhou", skip:"Pulado" }[s.status];
+      const dur   = s.ms !== null ? `${s.ms}ms` : "";
+
+      const row = document.createElement("div");
+      row.className = `test-row${s.status==="fail" ? " has-error" : ""}`;
+      row.dataset.key = key;
+      row.innerHTML = `
+        <span class="test-icon">${icon}</span>
+        <span class="test-name">${t.name}<small>${t.desc || ""}</small></span>
+        <span class="test-dur">${dur}</span>
+        <span class="test-badge badge-${badge}">${label}</span>
+        ${s.status==="fail" ? `<div class="test-detail">${escHtml(s.error || "")}</div>` : ""}`;
+      body.appendChild(row);
+
+      if (s.status !== "idle") {
+        totalAll++;
+        if (s.ms) totalMs += s.ms;
+      }
+      if (s.status==="pass") totalPass++;
+      if (s.status==="fail") totalFail++;
+      if (s.status==="skip") totalSkip++;
+    });
+  });
+
+  // Sumário
+  const allTests = SUITE.reduce((n, g) => n + g.tests.length, 0);
+  document.getElementById("sTotal").textContent = allTests;
+  document.getElementById("sPass").textContent  = totalPass;
+  document.getElementById("sFail").textContent  = totalFail;
+  document.getElementById("sSkip").textContent  = totalSkip;
+  document.getElementById("sDur").textContent   = totalMs ? totalMs + "ms" : "—";
+
+  // Barra de progresso
+  const done = totalPass + totalFail + totalSkip;
+  const pct  = allTests ? Math.round((done / allTests) * 100) : 0;
+  const bar  = document.getElementById("progressBar");
+  bar.style.width = pct + "%";
+  bar.style.background = totalFail > 0 ? "var(--danger)" : "var(--success)";
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function toggleGroup(gi) {
+  document.getElementById(`group-${gi}`).classList.toggle("collapsed");
+}
+
+function aplicarFiltro() { renderAll(); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXECUÇÃO
+// ═══════════════════════════════════════════════════════════════════════════
+async function runTest(groupName, ti) {
+  const g   = SUITE.find(x => x.group === groupName);
+  const t   = g.tests[ti];
+  const key = `${groupName}-${ti}`;
+
+  STATE[key] = { status: "run", error: null, ms: null };
+  renderAll();
+  log("info", `Iniciando: ${t.name}`);
+
+  const t0 = performance.now();
+  try {
+    await t.run();
+    const ms = Math.round(performance.now() - t0);
+    STATE[key] = { status: "pass", error: null, ms };
+    log("success", `PASSOU [${ms}ms] — ${t.name}`);
+  } catch (e) {
+    const ms = Math.round(performance.now() - t0);
+    if (e.name === "SkipError") {
+      STATE[key] = { status: "skip", error: e.message, ms };
+      log("warn", `PULADO — ${t.name}: ${e.message}`);
+    } else {
+      STATE[key] = { status: "fail", error: e.message, ms };
+      log("error", `FALHOU [${ms}ms] — ${t.name}: ${e.message}`);
+    }
+  }
+  renderAll();
+}
+
+async function runAll() {
+  log("info", "═══ Iniciando execução completa ═══");
+  for (const g of SUITE) {
+    for (let ti = 0; ti < g.tests.length; ti++) {
+      await runTest(g.group, ti);
+    }
+  }
+  log("info", "═══ Execução concluída ═══");
+}
+
+function runGroup(e) {
+  // Exibe seletor inline
+  const existing = document.getElementById("groupSelector");
+  if (existing) { existing.remove(); return; }
+  const sel = document.createElement("select");
+  sel.id = "groupSelector";
+  sel.style.cssText = "padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:.85rem";
+  SUITE.forEach(g => {
+    const opt = document.createElement("option");
+    opt.value = g.group;
+    opt.textContent = g.group;
+    sel.appendChild(opt);
+  });
+  const btn = document.createElement("button");
+  btn.className = "btn btn-primary";
+  btn.textContent = "▶ Executar";
+  btn.style.padding = "8px 14px";
+  btn.onclick = async () => {
+    const g = SUITE.find(x => x.group === sel.value);
+    if (!g) return;
+    log("info", `═══ Executando grupo: ${g.group} ═══`);
+    for (let ti = 0; ti < g.tests.length; ti++) {
+      await runTest(g.group, ti);
+    }
+    log("info", "═══ Grupo concluído ═══");
+    sel.remove(); btn.remove();
+  };
+  e.target.after(sel, btn);
+}
+
+function resetAll() {
+  SUITE.forEach(g => g.tests.forEach((t, ti) => {
+    STATE[`${g.group}-${ti}`] = { status: "idle", error: null, ms: null };
+  }));
+  _mId = null; _anexoId = null;
+  document.getElementById("filterStatus").value = "";
+  renderAll();
+  log("info", "Estado resetado.");
+}
+
+// ── Inicializar renderização
+renderAll();
+</script>
+</body>
+</html>
