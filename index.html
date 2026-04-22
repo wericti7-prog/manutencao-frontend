@@ -3,32 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>[STAGING] Sistema de Manutenção de TI</title>
+    <title>Sistema de Manutenção de TI - Supermercado</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="favicon.ico">
 </head>
 <body>
-
-<!-- ═══ STAGING BANNER ═══ -->
-<div id="stagingBanner" style="
-    position:fixed;top:0;left:0;right:0;z-index:99999;
-    background:linear-gradient(90deg,#b45309,#d97706,#b45309);
-    background-size:200% 100%;animation:stgPulse 3s ease-in-out infinite;
-    color:white;text-align:center;padding:7px 16px;font-size:.82rem;
-    font-weight:700;letter-spacing:.3px;
-    box-shadow:0 2px 8px rgba(0,0,0,.25);
-    display:flex;align-items:center;justify-content:center;gap:12px;">
-  <span>🚧 HOMOLOGAÇÃO (STAGING) — dados de teste, não usar em produção</span>
-  <button onclick="document.getElementById('stagingBanner').style.display='none'"
-    style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);
-    color:white;padding:2px 10px;border-radius:12px;font-size:.75rem;cursor:pointer;">
-    Ocultar
-  </button>
-</div>
-<style>
-  @keyframes stgPulse{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-  body { padding-top: 36px; }
-</style>
 
 
     <!-- ===== TELA DE LOGIN ===== -->
@@ -62,8 +41,8 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <h1>🚧 Sistema de Manutenção de TI</h1>
-                <p>⚠️ STAGING — Controle de Equipamentos — Supermercado Reis</p>
+                <h1>🛠️ Sistema de Manutenção de TI</h1>
+                <p>Controle de Equipamentos — Supermercado Reis</p>
             </div>
             <div class="header-stats">
                 <div class="stat-card">
@@ -508,7 +487,7 @@
     <script>
       // Keep-Alive — mantém o backend acordado
       setInterval(() => {
-        fetch(window.__STAGING_URL__ ? window.__STAGING_URL__ + "/ping" : "/ping").catch(() => {});
+        fetch("https://manutencao-backend-production-a072.up.railway.app/ping").catch(() => {});
       }, 4 * 60 * 1000);
     </script>
 </body>
