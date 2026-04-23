@@ -104,6 +104,12 @@ export function removerAnexo(manutencaoId, anexoId) {
     return apiFetch(`/manutencoes/${manutencaoId}/anexos/${anexoId}`, { method: "DELETE" });
 }
 
+export function listarRespostas(manutencaoId)       { return apiFetch(`/manutencoes/${manutencaoId}/respostas`); }
+export function podeResponder(manutencaoId)         { return apiFetch(`/manutencoes/${manutencaoId}/respostas/pode-responder`); }
+export function criarResposta(manutencaoId, dados)  {
+    return apiFetch(`/manutencoes/${manutencaoId}/respostas`, { method: "POST", body: JSON.stringify(dados) });
+}
+
 export function listarUsuarios()        { return apiFetch("/usuarios"); }
 export function criarUsuario(data)      { return apiFetch("/usuarios",        { method: "POST",   body: JSON.stringify(data) }); }
 export function editarUsuario(id, data) { return apiFetch(`/usuarios/${id}`,  { method: "PUT",    body: JSON.stringify(data) }); }

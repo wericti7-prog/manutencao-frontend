@@ -832,3 +832,41 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
     .modal-anexo-iframe { height: 60vh; }
     .modal-anexo-img { max-height: 60vh; }
 }
+
+/* ─── Abas de detalhes (DETALHES / RESPONDER) ─────────────────────────────── */
+.det-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 18px;
+}
+
+.det-tab-btn {
+    background: none;
+    border: none;
+    padding: 9px 18px;
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    border-radius: 6px 6px 0 0;
+    transition: color .15s, border-color .15s;
+}
+
+.det-tab-btn:hover  { color: var(--primary-color); }
+.det-tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); background: var(--hover-bg, #f0f4ff); }
+
+.det-panel { display: none; }
+.det-panel.active { display: block; }
+
+/* ─── Painel bloqueio Observador ─────────────────────────────────────────── */
+.resp-bloqueio {
+    text-align: center;
+    padding: 40px 20px;
+    background: #fff7ed;
+    border: 1px dashed #f59e0b;
+    border-radius: 10px;
+    color: var(--text-secondary);
+}

@@ -355,38 +355,247 @@ window.deleteManutencao = async function(id) {
 // ─── DETALHES + HISTÓRICO ─────────────────────────────────────────────────────
 window.verDetalhes = async function(id) {
     try {
+        const userRole = api.getUsuarioLogado()?.role || "";
         const [m, anexos] = await Promise.all([api.getManutencao(id), api.listarAnexos(id).catch(() => [])]);
         const statusEx  = m.resultado_reparo || m.status_equipamento || m.status;
         const reparoHtml = m.resultado_reparo
             ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span></div>` : "";
 
         document.getElementById("modalDetalhesTitle").textContent = `Atendimento #${m.numero}`;
+
+        // ─── Aba RESPONDER (Observador e Manutenção) ───────────────────────────
+        const podeUsarResposta = ["observador", "manutencao"].includes(userRole);
+        const abaResponderId = `responderTab_${id}`;
+
+        const tabsHtml = podeUsarResposta ? `
+            <div class="det-tabs">
+                <button class="det-tab-btn active" onclick="detSwitchTab('detalhes','${id}')">📄 Detalhes</button>
+                <button class="det-tab-btn" onclick="detSwitchTab('responder','${id}')">💬 Responder</button>
+            </div>` : "";
+
         document.getElementById("modalDetalhesContent").innerHTML = `
-            <div class="historico-info"><div class="historico-info-grid">
-                <div><strong>Nº:</strong> <span class="id-badge">${m.numero}</span></div>
-                <div><strong>Equipamento:</strong> ${m.equipamento}</div>
-                <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
-                <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
-                <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
-                <div><strong>Conclusão:</strong> ${formatDateTime(m.data_fim)}</div>
-                <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
-                ${reparoHtml}
-                <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
-                ${m.pecas ? `<div><strong>Peças:</strong> ${m.pecas}</div>` : ""}
-            </div></div>
-            <div style="margin-top:16px"><p><strong>Problema:</strong></p>
-                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
+            ${tabsHtml}
+            <div id="det-panel-detalhes" class="det-panel active">
+                <div class="historico-info"><div class="historico-info-grid">
+                    <div><strong>Nº:</strong> <span class="id-badge">${m.numero}</span></div>
+                    <div><strong>Equipamento:</strong> ${m.equipamento}</div>
+                    <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
+                    <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
+                    <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
+                    <div><strong>Conclusão:</strong> ${formatDateTime(m.data_fim)}</div>
+                    <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
+                    ${reparoHtml}
+                    <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
+                    ${m.pecas ? `<div><strong>Peças:</strong> ${m.pecas}</div>` : ""}
+                </div></div>
+                <div style="margin-top:16px"><p><strong>Problema:</strong></p>
+                    <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
+                </div>
+                <div style="margin-top:12px"><p><strong>Solução:</strong></p>
+                    <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
+                </div>
+                <div style="margin-top:16px;text-align:right">
+                    <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verHistorico(${m.id})">📋 Ver histórico de edições</button>
+                </div>
+                ${nfHtmlSomenteLeitura(anexos, String(m.id))}
+                <div id="det-respostas-lista-${id}" style="margin-top:20px"></div>
             </div>
-            <div style="margin-top:12px"><p><strong>Solução:</strong></p>
-                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
-            </div>
-            <div style="margin-top:16px;text-align:right">
-                <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verHistorico(${m.id})">📋 Ver histórico de edições</button>
-            </div>
-            ${nfHtmlSomenteLeitura(anexos, String(m.id))}
-            <div style="display:none"><!-- fim -->
+            <div id="det-panel-responder" class="det-panel" style="display:none">
+                <div id="det-responder-content-${id}">
+                    <p style="color:var(--text-secondary);font-size:.9rem">Carregando...</p>
+                </div>
             </div>`;
+
+        if (podeUsarResposta) {
+            // Carrega respostas existentes e estado do painel RESPONDER
+            detCarregarRespostas(id, userRole);
+        }
+
         openModal("modalDetalhes");
+    } catch (err) { showError(err.message); }
+};
+
+window.detSwitchTab = function(tab, id) {
+    document.querySelectorAll(".det-tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".det-panel").forEach(p => p.style.display = "none");
+    document.getElementById(`det-panel-${tab}`).style.display = "block";
+    event.currentTarget.classList.add("active");
+};
+
+async function detCarregarRespostas(id, userRole) {
+    const listaEl    = document.getElementById(`det-respostas-lista-${id}`);
+    const contentEl  = document.getElementById(`det-responder-content-${id}`);
+
+    try {
+        const [respostas, poderes] = await Promise.all([
+            api.listarRespostas(id),
+            api.podeResponder(id),
+        ]);
+
+        // Renderiza thread de respostas no painel de detalhes
+        if (listaEl) {
+            if (respostas.length) {
+                const itens = respostas.map(r => {
+                    const isManut   = r.role === "manutencao";
+                    const cor       = isManut ? "#eff6ff" : "#f0fdf4";
+                    const borda     = isManut ? "#3b82f6" : "#22c55e";
+                    const label     = isManut ? "🔧 Manutenção" : "👁️ Observador";
+                    const anexosHtml = r.anexos_resposta?.map((a, i) => `
+                        <div class="nf-item" style="margin-top:6px">
+                            <span class="nf-icone">${nfIcone(a.tipo)}</span>
+                            <div class="nf-info">
+                                <span class="nf-nome">${a.nome}</span>
+                                <span class="nf-meta">${nfFormatarTamanho(a.tamanho)} · ${a.data}</span>
+                            </div>
+                            <div class="nf-acoes">
+                                <button type="button" class="btn-nf btn-nf-baixar"
+                                    onclick="detBaixarAnexoResposta('${a.base64}','${a.nome}')" title="Download">⬇️</button>
+                            </div>
+                        </div>`).join("") || "";
+                    return `
+                        <div style="border-left:3px solid ${borda};background:${cor};
+                                    padding:12px 14px;border-radius:0 8px 8px 0;margin-bottom:10px">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                                <strong style="font-size:.88rem">${label} — ${r.autor}</strong>
+                                <span style="font-size:.78rem;color:var(--text-secondary)">${formatDateTime(r.criado_em)}</span>
+                            </div>
+                            ${r.texto ? `<p style="font-size:.9rem;margin:0 0 6px">${r.texto}</p>` : ""}
+                            ${anexosHtml}
+                        </div>`;
+                }).join("");
+                listaEl.innerHTML = `<p><strong>💬 Mensagens (${respostas.length})</strong></p>${itens}`;
+            }
+        }
+
+        // Renderiza painel RESPONDER
+        if (!contentEl) return;
+
+        if (userRole === "observador") {
+            if (!poderes.pode) {
+                contentEl.innerHTML = `
+                    <div class="resp-bloqueio">
+                        <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+                        <p style="font-weight:600;margin-bottom:6px">Aguardando Manutenção</p>
+                        <p style="font-size:.88rem;color:var(--text-secondary)">
+                            Você só pode responder depois que a equipe de Manutenção enviar um anexo neste chamado.
+                        </p>
+                    </div>`;
+                return;
+            }
+        }
+
+        // Formulário de resposta (Observador liberado ou Manutenção)
+        const labelAnexo = userRole === "observador"
+            ? "📎 Anexo (obrigatório)"
+            : "📎 Anexo (opcional)";
+        contentEl.innerHTML = `
+            <div id="resp-form-${id}">
+                <div style="margin-bottom:14px">
+                    <label style="font-weight:600;font-size:.9rem;display:block;margin-bottom:6px">✍️ Mensagem</label>
+                    <textarea id="resp-texto-${id}" rows="4"
+                        style="width:100%;border:1px solid var(--border-color);border-radius:8px;
+                               padding:10px;font-size:.9rem;resize:vertical;box-sizing:border-box"
+                        placeholder="Digite sua mensagem..."></textarea>
+                </div>
+                <div style="margin-bottom:14px">
+                    <label style="font-weight:600;font-size:.9rem;display:block;margin-bottom:6px">${labelAnexo}</label>
+                    <div id="resp-dropzone-${id}" class="nf-dropzone"
+                        style="cursor:pointer" onclick="document.getElementById('resp-input-${id}').click()">
+                        <p style="margin:0;font-size:.88rem;color:var(--text-secondary)">
+                            📂 Clique ou arraste arquivos aqui (máx. 5 MB cada)
+                        </p>
+                    </div>
+                    <input type="file" id="resp-input-${id}" multiple style="display:none">
+                    <div id="resp-lista-${id}" style="margin-top:8px"></div>
+                </div>
+                <button class="btn btn-primary" onclick="respEnviar('${id}','${userRole}')"
+                    style="width:100%">📤 Enviar Resposta</button>
+            </div>`;
+
+        // Pendurando arquivos selecionados em memória
+        window[`_respAnexos_${id}`] = [];
+
+        document.getElementById(`resp-input-${id}`).addEventListener("change", e => {
+            respAdicionarArquivos(id, e.target.files);
+            e.target.value = "";
+        });
+
+        const dz = document.getElementById(`resp-dropzone-${id}`);
+        dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("nf-drag-over"); });
+        dz.addEventListener("dragleave", () => dz.classList.remove("nf-drag-over"));
+        dz.addEventListener("drop", e => { e.preventDefault(); dz.classList.remove("nf-drag-over"); respAdicionarArquivos(id, e.dataTransfer.files); });
+
+    } catch (err) {
+        if (contentEl) contentEl.innerHTML = `<p style="color:red">Erro ao carregar: ${err.message}</p>`;
+    }
+}
+
+window.detBaixarAnexoResposta = function(base64, nome) {
+    const a = document.createElement("a");
+    a.href = base64; a.download = nome; a.click();
+};
+
+function respAdicionarArquivos(id, files) {
+    const MAX = 5 * 1024 * 1024;
+    const lista = window[`_respAnexos_${id}`] || [];
+    Array.from(files).forEach(file => {
+        if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            lista.push({ nome: file.name, tipo: file.type, tamanho: file.size,
+                         data: new Date().toLocaleDateString("pt-BR"), base64: e.target.result });
+            window[`_respAnexos_${id}`] = lista;
+            respRenderizarLista(id);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function respRenderizarLista(id) {
+    const lista = window[`_respAnexos_${id}`] || [];
+    const el = document.getElementById(`resp-lista-${id}`);
+    if (!el) return;
+    if (!lista.length) { el.innerHTML = ""; return; }
+    el.innerHTML = lista.map((a, i) => `
+        <div class="nf-item">
+            <span class="nf-icone">${nfIcone(a.tipo)}</span>
+            <div class="nf-info">
+                <span class="nf-nome">${a.nome}</span>
+                <span class="nf-meta">${nfFormatarTamanho(a.tamanho)}</span>
+            </div>
+            <div class="nf-acoes">
+                <button type="button" class="btn-nf btn-nf-remover"
+                    onclick="respRemoverArquivo('${id}',${i})" title="Remover">🗑️</button>
+            </div>
+        </div>`).join("");
+}
+
+window.respRemoverArquivo = function(id, i) {
+    const lista = window[`_respAnexos_${id}`] || [];
+    lista.splice(i, 1);
+    window[`_respAnexos_${id}`] = lista;
+    respRenderizarLista(id);
+};
+
+window.respEnviar = async function(id, userRole) {
+    const texto  = document.getElementById(`resp-texto-${id}`)?.value?.trim() || "";
+    const anexos = window[`_respAnexos_${id}`] || [];
+
+    if (!texto && !anexos.length) {
+        alert("Digite uma mensagem ou adicione pelo menos um anexo."); return;
+    }
+    if (userRole === "observador" && !anexos.length) {
+        alert("O Observador deve incluir pelo menos um anexo na resposta."); return;
+    }
+
+    try {
+        await api.criarResposta(id, { texto, anexos });
+        alert("Resposta enviada com sucesso!");
+        // Limpa e recarrega
+        window[`_respAnexos_${id}`] = [];
+        // Volta para aba de detalhes e recarrega
+        document.querySelectorAll(".det-tab-btn")[0]?.click();
+        verDetalhes(parseInt(id));
     } catch (err) { showError(err.message); }
 };
 
