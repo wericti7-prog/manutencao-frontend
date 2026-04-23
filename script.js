@@ -427,10 +427,7 @@ async function detCarregarRespostas(id, userRole) {
     const contentEl  = document.getElementById(`det-responder-content-${id}`);
 
     try {
-        const [respostas, poderes] = await Promise.all([
-            api.listarRespostas(id),
-            api.podeResponder(id),
-        ]);
+        const respostas = await api.listarRespostas(id);
 
         // Renderiza thread de respostas no painel de detalhes
         if (listaEl) {
@@ -467,24 +464,10 @@ async function detCarregarRespostas(id, userRole) {
             }
         }
 
-        // Renderiza painel RESPONDER
+        // Renderiza painel RESPONDER — sempre liberado para observador e manutencao
         if (!contentEl) return;
 
-        if (userRole === "observador") {
-            if (!poderes.pode) {
-                contentEl.innerHTML = `
-                    <div class="resp-bloqueio">
-                        <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
-                        <p style="font-weight:600;margin-bottom:6px">Aguardando Manutenção</p>
-                        <p style="font-size:.88rem;color:var(--text-secondary)">
-                            Você só pode responder depois que a equipe de Manutenção enviar um anexo neste chamado.
-                        </p>
-                    </div>`;
-                return;
-            }
-        }
-
-        // Formulário de resposta (Observador liberado ou Manutenção)
+        // Formulário de resposta
         const labelAnexo = userRole === "observador"
             ? "📎 Anexo (obrigatório)"
             : "📎 Anexo (opcional)";
@@ -643,7 +626,8 @@ window.verHistorico = async function(id) {
                 </table>
             </div>
             <div style="margin-top:16px;text-align:right">
-                <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verDetalhes(${m.id})">📄 Ver detalhes completos</button>
+                <button class="btn btn-primary" style="font-size:.88rem;padding:8px 16px;margin-right:8px" onclick="verDetalhes(${m.id})">📄 Ver detalhes completos</button>
+                <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verHistorico(${m.id})">📋 Ver histórico de edições</button>
             </div>
             ${nfHtmlSomenteLeitura(anexos, String(m.id))}
             <div style="display:none"><!-- fim -->
