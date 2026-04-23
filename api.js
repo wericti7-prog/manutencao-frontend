@@ -1,26 +1,14 @@
-// ─── STAGING — aponta para o backend de HOMOLOGAÇÃO ──────────────────────────
-// ⚠️  Este arquivo é exclusivo do ambiente de staging.
-//     NÃO substitua o api.js de produção por este arquivo.
-//
-// PASSO ÚNICO: cole a URL do seu backend de staging abaixo:
-const STAGING_URL = "manutencao-backend-production-a072.up.railway.app"; // ← edite aqui
+const API_BASE = "https://manutencao-backend-production-a072.up.railway.app";
 
-// Expõe para o keep-alive no index.html
-window.__STAGING_URL__ = STAGING_URL;
-
-const API_BASE = STAGING_URL;
-
-// ─── localStorage com prefixo "stg_" — nunca conflita com produção ───────────
+// ─── localStorage de produção ─────────────────────────────────────────────────
 const storage = {
-    getToken:    ()  => localStorage.getItem("stg_jwt_token"),
-    setToken:    (t) => localStorage.setItem("stg_jwt_token", t),
-    clearToken:  ()  => localStorage.removeItem("stg_jwt_token"),
-    getUsuario:  ()  => { const s = localStorage.getItem("stg_usuario_logado"); return s ? JSON.parse(s) : null; },
-    setUsuario:  (u) => localStorage.setItem("stg_usuario_logado", JSON.stringify(u)),
-    clearUsuario:()  => localStorage.removeItem("stg_usuario_logado"),
+    getToken:    ()  => localStorage.getItem("jwt_token"),
+    setToken:    (t) => localStorage.setItem("jwt_token", t),
+    clearToken:  ()  => localStorage.removeItem("jwt_token"),
+    getUsuario:  ()  => { const s = localStorage.getItem("usuario_logado"); return s ? JSON.parse(s) : null; },
+    setUsuario:  (u) => localStorage.setItem("usuario_logado", JSON.stringify(u)),
+    clearUsuario:()  => localStorage.removeItem("usuario_logado"),
 };
-
-// ─── (Restante idêntico ao api.js de produção) ────────────────────────────────
 
 function authHeaders() {
     const token = storage.getToken();
@@ -38,10 +26,7 @@ async function apiFetch(path, options = {}) {
             ...options,
         });
     } catch (e) {
-        throw new Error(
-            "Não foi possível conectar ao servidor de STAGING. " +
-            "Verifique se a URL em staging/api.js está correta e se o backend está ativo."
-        );
+        throw new Error("Não foi possível conectar ao servidor. Verifique sua conexão.");
     }
 
     if (res.status === 401) {
@@ -72,10 +57,7 @@ export async function login(username, password) {
             body,
         });
     } catch (e) {
-        throw new Error(
-            "Não foi possível conectar ao servidor de STAGING. " +
-            "Verifique a URL em staging/api.js e se o backend de staging está rodando."
-        );
+        throw new Error("Não foi possível conectar ao servidor.");
     }
 
     if (!res.ok) {
@@ -108,20 +90,17 @@ export function excluirManutencao(id)   { return apiFetch(`/manutencoes/${id}`, 
 export function getHistorico(id)        { return apiFetch(`/manutencoes/${id}/historico`); }
 export function reabrirManutencao(id, status) { return apiFetch(`/manutencoes/${id}/reabrir`, { method: "POST", body: JSON.stringify({ status }) }); }
 
-export function listarLixeira()         { return apiFetch("/lixeira"); }
-export function restaurarManutencao(id) { return apiFetch(`/lixeira/${id}/restaurar`, { method: "POST" }); }
-
 export function finalizarManutencao(id, data) {
     return apiFetch(`/manutencoes/${id}/finalizar`, { method: "POST", body: JSON.stringify(data) });
 }
 
 export function getSugestoes() { return apiFetch("/equipamentos/sugestoes"); }
 
-export function listarAnexos(manutencaoId)          { return apiFetch(`/manutencoes/${manutencaoId}/anexos`); }
-export function adicionarAnexo(manutencaoId, dados)  {
+export function listarAnexos(manutencaoId)         { return apiFetch(`/manutencoes/${manutencaoId}/anexos`); }
+export function adicionarAnexo(manutencaoId, dados) {
     return apiFetch(`/manutencoes/${manutencaoId}/anexos`, { method: "POST", body: JSON.stringify(dados) });
 }
-export function removerAnexo(manutencaoId, anexoId)  {
+export function removerAnexo(manutencaoId, anexoId) {
     return apiFetch(`/manutencoes/${manutencaoId}/anexos/${anexoId}`, { method: "DELETE" });
 }
 
@@ -129,3 +108,6 @@ export function listarUsuarios()        { return apiFetch("/usuarios"); }
 export function criarUsuario(data)      { return apiFetch("/usuarios",        { method: "POST",   body: JSON.stringify(data) }); }
 export function editarUsuario(id, data) { return apiFetch(`/usuarios/${id}`,  { method: "PUT",    body: JSON.stringify(data) }); }
 export function excluirUsuario(id)      { return apiFetch(`/usuarios/${id}`,  { method: "DELETE" }); }
+
+export function listarLixeira()         { return apiFetch("/lixeira"); }
+export function restaurarManutencao(id) { return apiFetch(`/lixeira/${id}/restaurar`, { method: "POST" }); }
