@@ -3,7 +3,7 @@
 //     NÃO substitua o api.js de produção por este arquivo.
 //
 // PASSO ÚNICO: cole a URL do seu backend de staging abaixo:
-const STAGING_URL = "https://manutencao-staging-production.up.railway.app"; // ← edite aqui
+const STAGING_URL = "manutencao-backend-production-a072.up.railway.app"; // ← edite aqui
 
 // Expõe para o keep-alive no index.html
 window.__STAGING_URL__ = STAGING_URL;
