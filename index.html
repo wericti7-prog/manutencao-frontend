@@ -72,6 +72,7 @@
             <button class="tab-btn" data-tab="finalizados">✅ Finalizados</button>
             <button class="tab-btn" data-tab="relatorios">📊 Relatórios</button>
             <button class="tab-btn" id="menuUsuarios" data-tab="usuarios" style="display:none">👥 Usuários</button>
+            <button class="tab-btn" id="menuLixeira" data-tab="lixeira" style="display:none">🗑️ Lixeira</button>
         </nav>
 
         <!-- ===== ABA MANUTENÇÕES ===== -->
@@ -245,7 +246,44 @@
             </div>
         </div>
 
+        <!-- ===== ABA LIXEIRA (gerência) ===== -->
+        <div id="lixeira" class="tab-content">
+            <div class="section-header">
+                <h2>🗑️ Lixeira — Chamados Excluídos</h2>
+            </div>
+            <div id="listaLixeira" class="table-container"></div>
+        </div>
+
     </div><!-- /container -->
+
+    <!-- ===== MODAL — Reabrir Chamado ===== -->
+    <div id="modalReabrir" class="modal">
+        <div class="modal-content" style="max-width:420px;">
+            <div class="modal-header">
+                <h3>↩️ Reabrir Chamado</h3>
+                <span class="close" data-modal="modalReabrir">&times;</span>
+            </div>
+            <div style="padding:25px;">
+                <p style="color:var(--text-secondary);margin-bottom:20px;">
+                    Selecione o status para reabrir este chamado:
+                </p>
+                <div class="form-group">
+                    <label for="reabrirStatus">Novo Status</label>
+                    <select id="reabrirStatus" class="form-control">
+                        <option value="Em Manutenção">Em Manutenção</option>
+                        <option value="Aguardando Peças">Aguardando Peças</option>
+                        <option value="Aguardando aprovação">Aguardando aprovação</option>
+                        <option value="Operacional">Operacional</option>
+                    </select>
+                </div>
+                <input type="hidden" id="reabrirId">
+                <div class="modal-footer" style="padding:16px 0 0;">
+                    <button type="button" class="btn btn-secondary" data-modal="modalReabrir">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnConfirmarReabrir">↩️ Confirmar Reabertura</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ===== MODAL — Nova / Editar Manutenção ===== -->
     <div id="modalManutencao" class="modal">

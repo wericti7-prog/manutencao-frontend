@@ -106,6 +106,10 @@ export function criarManutencao(data)   { return apiFetch("/manutencoes",       
 export function editarManutencao(id, d) { return apiFetch(`/manutencoes/${id}`,  { method: "PUT",    body: JSON.stringify(d) }); }
 export function excluirManutencao(id)   { return apiFetch(`/manutencoes/${id}`,  { method: "DELETE" }); }
 export function getHistorico(id)        { return apiFetch(`/manutencoes/${id}/historico`); }
+export function reabrirManutencao(id, status) { return apiFetch(`/manutencoes/${id}/reabrir`, { method: "POST", body: JSON.stringify({ status }) }); }
+
+export function listarLixeira()         { return apiFetch("/lixeira"); }
+export function restaurarManutencao(id) { return apiFetch(`/lixeira/${id}/restaurar`, { method: "POST" }); }
 
 export function finalizarManutencao(id, data) {
     return apiFetch(`/manutencoes/${id}/finalizar`, { method: "POST", body: JSON.stringify(data) });

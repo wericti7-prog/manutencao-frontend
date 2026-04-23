@@ -33,6 +33,8 @@ function mostrarApp() {
     // Controle de permissões por perfil
     const menuUsuarios = document.getElementById("menuUsuarios");
     if (menuUsuarios) menuUsuarios.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
+    const menuLixeira = document.getElementById("menuLixeira");
+    if (menuLixeira) menuLixeira.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
 
     // Aba Relatórios: visível somente para gerencia/admin
     const menuRelatorios = document.querySelector(".tab-btn[data-tab='relatorios']");
@@ -117,6 +119,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
         if (tab === "finalizados") loadFinalizados();
         if (tab === "relatorios")  loadRelatorios();
         if (tab === "usuarios")    loadUsuarios();
+        if (tab === "lixeira")     loadLixeira();
         updateStats();
     });
 });
@@ -471,6 +474,8 @@ async function loadFinalizados() {
         }
         const custoTotal = lista.reduce((s, m) => s + (m.custo || 0), 0);
         const rows = lista.map(m => {
+            const u = api.getUsuarioLogado();
+            const isGerencia = u && ["gerencia","admin"].includes(u.role);
             return `<tr>
                 <td><span class="id-badge">${m.numero}</span></td>
                 <td><button class="link-equipamento" onclick="verDetalhes(${m.id})">${m.equipamento}</button></td>
@@ -480,13 +485,19 @@ async function loadFinalizados() {
                 <td>${formatDateTime(m.data_fim)}</td>
                 <td>${m.resultado_reparo ? `<span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span>` : "—"}</td>
                 <td>${formatCurrency(m.custo)}</td>
-                <td><button class="btn-icon btn-history" onclick="verHistorico(${m.id})" title="Histórico">📋</button></td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-history" onclick="verHistorico(${m.id})" title="Histórico">📋</button>
+                        ${isGerencia ? `<button class="btn-icon btn-edit" onclick="abrirModalReabrir(${m.id})" title="Reabrir chamado">↩️</button>` : ""}
+                        ${isGerencia ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}
+                    </div>
+                </td>
             </tr>`;
         }).join("");
         document.getElementById("listaFinalizados").innerHTML = `
             <table>
                 <thead><tr><th>Nº</th><th>Equipamento</th><th>Localização</th><th>Técnico</th>
-                    <th>Início</th><th>Conclusão</th><th>Reparo</th><th>Custo</th><th>Hist.</th>
+                    <th>Início</th><th>Conclusão</th><th>Reparo</th><th>Custo</th><th>Ações</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
                 <tfoot><tr>
@@ -804,3 +815,68 @@ document.getElementById("filterTipoManutencao")?.addEventListener("change", load
 document.getElementById("filterStatusManutencao")?.addEventListener("change", loadManutencoes);
 document.getElementById("searchFinalizado")?.addEventListener("input", loadFinalizados);
 document.getElementById("filterTipoFinalizado")?.addEventListener("change", loadFinalizados);
+
+// ─── REABRIR CHAMADO (gerência) ───────────────────────────────────────────────
+window.abrirModalReabrir = function(id) {
+    document.getElementById("reabrirId").value = id;
+    document.getElementById("reabrirStatus").value = "Em Manutenção";
+    openModal("modalReabrir");
+};
+
+document.getElementById("btnConfirmarReabrir")?.addEventListener("click", async () => {
+    const id     = document.getElementById("reabrirId").value;
+    const status = document.getElementById("reabrirStatus").value;
+    try {
+        await api.reabrirManutencao(id, status);
+        closeModal("modalReabrir");
+        loadManutencoes();
+        loadFinalizados();
+        updateStats();
+    } catch (err) { showError(err.message); }
+});
+
+// ─── LIXEIRA (gerência) ───────────────────────────────────────────────────────
+async function loadLixeira() {
+    const el = document.getElementById("listaLixeira");
+    if (!el) return;
+    try {
+        const lista = await api.listarLixeira();
+        if (!lista.length) {
+            el.innerHTML = `<div class="empty-state"><h3>Lixeira vazia</h3><p>Nenhum chamado excluído.</p></div>`;
+            return;
+        }
+        const rows = await Promise.all(lista.map(async m => {
+            const deletadoEm = m.deletado_em ? new Date(m.deletado_em).toLocaleString("pt-BR") : "—";
+            return `<tr>
+                <td><span class="id-badge">#${m.numero}</span></td>
+                <td>${m.equipamento}</td>
+                <td>${m.localizacao || "—"}</td>
+                <td>${m.tecnico || "—"}</td>
+                <td><span class="badge badge-secondary">${m.status}</span></td>
+                <td style="font-size:.85rem;color:var(--text-secondary)">${deletadoEm}</td>
+                <td style="font-size:.85rem;color:var(--text-secondary)">${m.deletado_por || "—"}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-edit" title="Restaurar" onclick="restaurarChamado(${m.id})">↩️</button>
+                    </div>
+                </td>
+            </tr>`;
+        }));
+        el.innerHTML = `<table>
+            <thead><tr>
+                <th>Nº</th><th>Equipamento</th><th>Localização</th><th>Técnico</th>
+                <th>Status</th><th>Excluído em</th><th>Excluído por</th><th>Ações</th>
+            </tr></thead>
+            <tbody>${rows.join("")}</tbody>
+        </table>`;
+    } catch (err) { showError(err.message); }
+}
+
+window.restaurarChamado = async function(id) {
+    if (!confirm("Restaurar este chamado da lixeira?")) return;
+    try {
+        await api.restaurarManutencao(id);
+        loadLixeira();
+        updateStats();
+    } catch (err) { showError(err.message); }
+};
