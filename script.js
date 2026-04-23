@@ -365,7 +365,6 @@ window.verDetalhes = async function(id) {
 
         // ─── Aba RESPONDER (Observador e Manutenção) ───────────────────────────
         const podeUsarResposta = ["observador", "manutencao"].includes(userRole);
-        const abaResponderId = `responderTab_${id}`;
 
         const tabsHtml = podeUsarResposta ? `
             <div class="det-tabs">
@@ -406,10 +405,8 @@ window.verDetalhes = async function(id) {
                 </div>
             </div>`;
 
-        if (podeUsarResposta) {
-            // Carrega respostas existentes e estado do painel RESPONDER
-            detCarregarRespostas(id, userRole);
-        }
+        // Todos os perfis veem respostas; podeUsarResposta controla o formulário
+        detCarregarRespostas(id, userRole);
 
         openModal("modalDetalhes");
     } catch (err) { showError(err.message); }
@@ -464,8 +461,13 @@ async function detCarregarRespostas(id, userRole) {
             }
         }
 
-        // Renderiza painel RESPONDER — sempre liberado para observador e manutencao
+        // Painel RESPONDER: formulário só para observador/manutencao
         if (!contentEl) return;
+
+        if (!podeUsarResposta) {
+            contentEl.innerHTML = "";
+            return;
+        }
 
         // Formulário de resposta
         const labelAnexo = userRole === "observador"
