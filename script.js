@@ -195,7 +195,7 @@ async function loadManutencoes() {
             const podeEditar  = !["observador"].includes(userRole);
             const podeExcluir = ["tecnico","gerencia","admin"].includes(userRole);
             const acoes = `
-                <button class="btn-icon btn-history" onclick="verHistorico(${m.id})" title="Histórico">📋</button>
+                <button class="btn-icon btn-history" onclick="verDetalhes(${m.id})" title="Ver detalhes">📋</button>
                 ${podeEditar  ? `<button class="btn-icon btn-edit"   onclick="editManutencao(${m.id})" title="Editar">✏️</button>` : ""}
                 ${podeExcluir ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}`;
             return `<tr>
@@ -442,6 +442,8 @@ async function detCarregarRespostas(id, userRole) {
                                 <span class="nf-meta">${nfFormatarTamanho(a.tamanho)} · ${a.data}</span>
                             </div>
                             <div class="nf-acoes">
+                                <button type="button" class="btn-nf btn-nf-ver"
+                                    onclick="detVisualizarAnexoResposta('${a.base64}','${a.nome}','${a.tipo}')" title="Visualizar">👁️</button>
                                 <button type="button" class="btn-nf btn-nf-baixar"
                                     onclick="detBaixarAnexoResposta('${a.base64}','${a.nome}')" title="Download">⬇️</button>
                             </div>
@@ -518,6 +520,31 @@ async function detCarregarRespostas(id, userRole) {
 window.detBaixarAnexoResposta = function(base64, nome) {
     const a = document.createElement("a");
     a.href = base64; a.download = nome; a.click();
+};
+
+window.detVisualizarAnexoResposta = function(base64, nome, tipo) {
+    document.getElementById("modalAnexoNome").textContent  = nome;
+    document.getElementById("modalAnexoIcone").textContent = nfIcone(tipo);
+    const body = document.getElementById("modalAnexoBody");
+    if (tipo.includes("image")) {
+        body.innerHTML = `<img src="${base64}" alt="${nome}" class="modal-anexo-img">`;
+    } else if (tipo.includes("pdf")) {
+        body.innerHTML = `<iframe src="${base64}" class="modal-anexo-iframe"></iframe>`;
+    } else {
+        body.innerHTML = `
+            <div class="modal-anexo-sem-preview">
+                <div style="font-size:4rem;margin-bottom:16px">${nfIcone(tipo)}</div>
+                <p style="font-size:1.05rem;font-weight:600;color:var(--text-primary);margin-bottom:8px">${nome}</p>
+                <p style="font-size:.9rem;color:var(--text-secondary)">
+                    Este tipo de arquivo não pode ser visualizado aqui.<br>Use o botão Download para abrir.
+                </p>
+            </div>`;
+    }
+    document.getElementById("btnModalAnexoBaixar").onclick = () => {
+        const a = document.createElement("a");
+        a.href = base64; a.download = nome; a.click();
+    };
+    openModal("modalAnexo");
 };
 
 function respAdicionarArquivos(id, files) {
@@ -682,7 +709,7 @@ async function loadFinalizados() {
                 <td>${formatCurrency(m.custo)}</td>
                 <td>
                     <div class="action-buttons">
-                        <button class="btn-icon btn-history" onclick="verHistorico(${m.id})" title="Histórico">📋</button>
+                        <button class="btn-icon btn-history" onclick="verDetalhes(${m.id})" title="Ver detalhes">📋</button>
                         ${isGerencia ? `<button class="btn-icon btn-edit" onclick="abrirModalReabrir(${m.id})" title="Reabrir chamado">↩️</button>` : ""}
                         ${isGerencia ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}
                     </div>
