@@ -46,9 +46,16 @@ function mostrarApp() {
 
     updateStats();
     loadManutencoes();
+    chatIniciar();
 }
 
 function mostrarLogin() {
+    chatParar();
+    const w = document.getElementById("chat-widget");
+    const f = document.getElementById("chat-fab");
+    if (w) w.remove();
+    if (f) f.remove();
+    _chatUltimoId = 0; _chatNaoLidas = 0; _chatAnexos = [];
     document.getElementById("appPrincipal").style.display = "none";
     document.getElementById("telaLogin").style.display    = "flex";
     document.getElementById("formLogin").reset();
@@ -1105,4 +1112,262 @@ window.restaurarChamado = async function(id) {
         loadLixeira();
         updateStats();
     } catch (err) { showError(err.message); }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHAT FLUTUANTE GLOBAL (Suprimentos ↔ Manutenção)
+// ═══════════════════════════════════════════════════════════════════════════════
+let _chatAberto       = false;
+let _chatUltimoId     = 0;
+let _chatAnexos       = [];
+let _chatPollingTimer = null;
+let _chatNaoLidas     = 0;
+
+function chatPodeEnviar() {
+    const role = api.getUsuarioLogado()?.role || "";
+    return ["observador", "manutencao"].includes(role);
+}
+
+function chatIniciar() {
+    if (!api.isLogado()) return;
+    _chatCriarWidget();
+    chatPolling();
+}
+
+function chatParar() {
+    if (_chatPollingTimer) { clearInterval(_chatPollingTimer); _chatPollingTimer = null; }
+}
+
+async function chatPolling() {
+    chatParar();
+    await chatCarregarNovas();
+    _chatPollingTimer = setInterval(chatCarregarNovas, 5000);
+}
+
+async function chatCarregarNovas() {
+    if (!api.isLogado()) return;
+    try {
+        const msgs = await api.listarChat(_chatUltimoId);
+        if (!msgs.length) return;
+        _chatUltimoId = msgs[msgs.length - 1].id;
+        const lista = document.getElementById("chat-lista");
+        if (!lista) return;
+        msgs.forEach(m => {
+            const minha = m.autor === api.getUsuarioLogado()?.nome;
+            lista.appendChild(_chatCriarBolha(m, minha));
+        });
+        // Badge de não lidas quando minimizado
+        if (!_chatAberto) {
+            _chatNaoLidas += msgs.length;
+            _chatAtualizarBadge();
+        } else {
+            _chatScrollBottom();
+        }
+    } catch {}
+}
+
+function _chatAtualizarBadge() {
+    const badge = document.getElementById("chat-badge");
+    if (!badge) return;
+    if (_chatNaoLidas > 0) {
+        badge.textContent = _chatNaoLidas > 99 ? "99+" : _chatNaoLidas;
+        badge.style.display = "flex";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+function _chatScrollBottom() {
+    const lista = document.getElementById("chat-lista");
+    if (lista) lista.scrollTop = lista.scrollHeight;
+}
+
+function _chatCriarBolha(m, minha) {
+    const wrap = document.createElement("div");
+    wrap.className = "chat-msg-wrap " + (minha ? "chat-msg-minha" : "chat-msg-deles");
+
+    const hora = m.criado_em ? new Date(m.criado_em).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "";
+    const label = m.role === "manutencao" ? "🔧 " + m.autor : "👁️ " + m.autor;
+
+    let anexosHtml = "";
+    if (m.anexos?.length) {
+        anexosHtml = m.anexos.map(a => `
+            <div class="chat-anexo" onclick="chatVerAnexo('${encodeURIComponent(a.base64)}','${encodeURIComponent(a.nome)}','${encodeURIComponent(a.tipo)}')">
+                <span class="chat-anexo-icone">${nfIcone(a.tipo)}</span>
+                <div class="chat-anexo-info">
+                    <span class="chat-anexo-nome">${a.nome}</span>
+                    <span class="chat-anexo-meta">${nfFormatarTamanho(a.tamanho)}</span>
+                </div>
+                <span class="chat-anexo-dl">⬇️</span>
+            </div>`).join("");
+    }
+
+    wrap.innerHTML = `
+        <div class="chat-bolha">
+            <div class="chat-autor">${label}</div>
+            ${m.texto ? `<div class="chat-texto">${m.texto}</div>` : ""}
+            ${anexosHtml}
+            <div class="chat-hora">${hora}</div>
+        </div>`;
+    return wrap;
+}
+
+window.chatVerAnexo = function(b64enc, nomeEnc, tipoEnc) {
+    const base64 = decodeURIComponent(b64enc);
+    const nome   = decodeURIComponent(nomeEnc);
+    const tipo   = decodeURIComponent(tipoEnc);
+    const a = document.createElement("a");
+    a.href = base64; a.download = nome; a.click();
+};
+
+function _chatCriarWidget() {
+    if (document.getElementById("chat-widget")) return;
+
+    const role = api.getUsuarioLogado()?.role || "";
+    const podeEnviar = chatPodeEnviar();
+
+    const inputArea = podeEnviar ? `
+        <div class="chat-input-area">
+            <div class="chat-anexos-preview" id="chat-anexos-preview"></div>
+            <div class="chat-input-row">
+                <button class="chat-btn-anexo" onclick="document.getElementById('chat-file-input').click()" title="Anexar arquivo">📎</button>
+                <input type="file" id="chat-file-input" multiple style="display:none">
+                <textarea id="chat-textarea" class="chat-textarea" rows="1"
+                    placeholder="Mensagem..." onkeydown="chatKeyDown(event)"></textarea>
+                <button class="chat-btn-enviar" onclick="chatEnviar()" title="Enviar">➤</button>
+            </div>
+        </div>` : `
+        <div class="chat-somente-leitura">
+            👁️ Apenas Suprimentos e Manutenção podem enviar mensagens.
+        </div>`;
+
+    const widget = document.createElement("div");
+    widget.id = "chat-widget";
+    widget.className = "chat-widget chat-fechado";
+    widget.innerHTML = `
+        <div class="chat-header" onclick="chatToggle()">
+            <div class="chat-header-info">
+                <span class="chat-header-icone">💬</span>
+                <div>
+                    <div class="chat-header-titulo">Chat — Suprimentos & Manutenção</div>
+                    <div class="chat-header-sub">Canal direto entre equipes</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+                <span class="chat-status-dot" title="Online"></span>
+                <span class="chat-toggle-icone" id="chat-toggle-icone">▲</span>
+            </div>
+        </div>
+        <div class="chat-body" id="chat-body">
+            <div class="chat-lista" id="chat-lista">
+                <div class="chat-vazio" id="chat-vazio">
+                    <div style="font-size:2rem;margin-bottom:8px">💬</div>
+                    <p>Nenhuma mensagem ainda.</p>
+                    <p style="font-size:.8rem;opacity:.7">As mensagens ficam visíveis para todos.</p>
+                </div>
+            </div>
+            ${inputArea}
+        </div>`;
+
+    document.body.appendChild(widget);
+
+    // Badge no botão flutuante
+    const fab = document.createElement("div");
+    fab.id = "chat-fab";
+    fab.className = "chat-fab";
+    fab.title = "Abrir chat";
+    fab.onclick = chatToggle;
+    fab.innerHTML = `
+        <span style="font-size:1.4rem">💬</span>
+        <span class="chat-badge" id="chat-badge" style="display:none">0</span>`;
+    document.body.appendChild(fab);
+
+    // Eventos de arquivo
+    document.getElementById("chat-file-input")?.addEventListener("change", e => {
+        chatAdicionarArquivos(e.target.files);
+        e.target.value = "";
+    });
+}
+
+window.chatToggle = function() {
+    const widget = document.getElementById("chat-widget");
+    const fab    = document.getElementById("chat-fab");
+    const icone  = document.getElementById("chat-toggle-icone");
+    if (!widget) return;
+
+    _chatAberto = !_chatAberto;
+    widget.classList.toggle("chat-fechado", !_chatAberto);
+    widget.classList.toggle("chat-aberto",   _chatAberto);
+    fab.style.display = _chatAberto ? "none" : "flex";
+
+    if (icone) icone.textContent = _chatAberto ? "▼" : "▲";
+
+    if (_chatAberto) {
+        _chatNaoLidas = 0;
+        _chatAtualizarBadge();
+        setTimeout(_chatScrollBottom, 100);
+    }
+};
+
+window.chatKeyDown = function(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        chatEnviar();
+    }
+};
+
+function chatAdicionarArquivos(files) {
+    const MAX = 5 * 1024 * 1024;
+    Array.from(files).forEach(file => {
+        if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            _chatAnexos.push({ nome: file.name, tipo: file.type, tamanho: file.size,
+                               data: new Date().toLocaleDateString("pt-BR"), base64: e.target.result });
+            chatRenderizarPreview();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function chatRenderizarPreview() {
+    const el = document.getElementById("chat-anexos-preview");
+    if (!el) return;
+    el.innerHTML = _chatAnexos.map((a, i) => `
+        <div class="chat-preview-item">
+            <span>${nfIcone(a.tipo)}</span>
+            <span class="chat-preview-nome">${a.nome}</span>
+            <button onclick="chatRemoverAnexo(${i})" class="chat-preview-rm">✕</button>
+        </div>`).join("");
+    el.style.display = _chatAnexos.length ? "block" : "none";
+}
+
+window.chatRemoverAnexo = function(i) {
+    _chatAnexos.splice(i, 1);
+    chatRenderizarPreview();
+};
+
+window.chatEnviar = async function() {
+    const textarea = document.getElementById("chat-textarea");
+    const texto    = textarea?.value?.trim() || "";
+    if (!texto && !_chatAnexos.length) return;
+
+    const btnEnviar = document.querySelector(".chat-btn-enviar");
+    if (btnEnviar) btnEnviar.disabled = true;
+
+    try {
+        await api.enviarChat({ texto, anexos: _chatAnexos });
+        if (textarea) textarea.value = "";
+        _chatAnexos = [];
+        chatRenderizarPreview();
+        // Remove aviso de vazio
+        const vazio = document.getElementById("chat-vazio");
+        if (vazio) vazio.remove();
+        await chatCarregarNovas();
+    } catch (err) {
+        alert("Erro ao enviar: " + err.message);
+    } finally {
+        if (btnEnviar) btnEnviar.disabled = false;
+        textarea?.focus();
+    }
 };

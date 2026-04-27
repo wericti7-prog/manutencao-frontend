@@ -117,3 +117,6 @@ export function excluirUsuario(id)      { return apiFetch(`/usuarios/${id}`,  { 
 
 export function listarLixeira()         { return apiFetch("/lixeira"); }
 export function restaurarManutencao(id) { return apiFetch(`/lixeira/${id}/restaurar`, { method: "POST" }); }
+
+export function listarChat(desdeId = 0)  { return apiFetch(`/chat?desde_id=${desdeId}`); }
+export function enviarChat(dados)        { return apiFetch("/chat", { method: "POST", body: JSON.stringify(dados) }); }
