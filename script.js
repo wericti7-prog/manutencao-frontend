@@ -423,6 +423,9 @@ async function detCarregarRespostas(id, userRole) {
     const listaEl    = document.getElementById(`det-respostas-lista-${id}`);
     const contentEl  = document.getElementById(`det-responder-content-${id}`);
 
+    // Garante que o usuário está logado antes de fazer requisições
+    if (!api.isLogado()) return;
+
     try {
         const respostas = await api.listarRespostas(id);
 
@@ -466,6 +469,7 @@ async function detCarregarRespostas(id, userRole) {
         // Painel RESPONDER: formulário só para observador/manutencao
         if (!contentEl) return;
 
+        const podeUsarResposta = ["observador", "manutencao"].includes(userRole);
         if (!podeUsarResposta) {
             contentEl.innerHTML = "";
             return;
