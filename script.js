@@ -62,10 +62,7 @@ function mostrarLogin() {
     document.getElementById("loginErro").style.display    = "none";
 }
 
-// Restaura sessão — localStorage persiste entre recarregamentos e reaberturas
-if (api.isLogado()) {
-    mostrarApp();
-}
+// Restaura sessão — movido para o final do módulo (ver fim do arquivo)
 
 // Sessão expirada (token JWT venceu) — volta para login sem erro brusco
 window.addEventListener("sessao-expirada", () => {
@@ -1245,7 +1242,7 @@ function _chatCriarWidget() {
     widget.id = "chat-widget";
     widget.className = "chat-widget chat-fechado";
     widget.innerHTML = `
-        <div class="chat-header" onclick="chatToggle()">
+        <div class="chat-header" id="chat-header-btn">
             <div class="chat-header-info">
                 <span class="chat-header-icone">💬</span>
                 <div>
@@ -1271,12 +1268,15 @@ function _chatCriarWidget() {
 
     document.body.appendChild(widget);
 
+    // Vincula chatToggle ao header via addEventListener (evita problema de escopo com type="module")
+    document.getElementById("chat-header-btn")?.addEventListener("click", () => window.chatToggle());
+
     // Badge no botão flutuante
     const fab = document.createElement("div");
     fab.id = "chat-fab";
     fab.className = "chat-fab";
     fab.title = "Abrir chat";
-    fab.onclick = chatToggle;
+    fab.addEventListener("click", () => window.chatToggle());
     fab.innerHTML = `
         <span style="font-size:1.4rem">💬</span>
         <span class="chat-badge" id="chat-badge" style="display:none">0</span>`;
@@ -1371,3 +1371,9 @@ window.chatEnviar = async function() {
         textarea?.focus();
     }
 };
+
+// ─── Inicialização — executado após todas as definições de window.* ────────────
+// Restaura sessão — localStorage persiste entre recarregamentos e reaberturas
+if (api.isLogado()) {
+    mostrarApp();
+}
