@@ -46,15 +46,10 @@ function mostrarApp() {
 
     updateStats();
     loadManutencoes();
-    chatIniciar();
 }
 
 function mostrarLogin() {
     chatParar();
-    const w = document.getElementById("chat-widget");
-    const f = document.getElementById("chat-fab");
-    if (w) w.remove();
-    if (f) f.remove();
     _chatUltimoId = 0; _chatNaoLidas = 0; _chatAnexos = [];
     document.getElementById("appPrincipal").style.display = "none";
     document.getElementById("telaLogin").style.display    = "flex";
@@ -62,7 +57,10 @@ function mostrarLogin() {
     document.getElementById("loginErro").style.display    = "none";
 }
 
-// Restaura sessão — movido para o final do módulo (ver fim do arquivo)
+// Restaura sessão — localStorage persiste entre recarregamentos e reaberturas
+if (api.isLogado()) {
+    mostrarApp();
+}
 
 // Sessão expirada (token JWT venceu) — volta para login sem erro brusco
 window.addEventListener("sessao-expirada", () => {
@@ -130,7 +128,16 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 
 // ─── Modais ────────────────────────────────────────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add("active"); }
-function closeModal(id) { document.getElementById(id).classList.remove("active"); }
+function closeModal(id) {
+    document.getElementById(id).classList.remove("active");
+    // Para o polling do chat quando fechar o modal de detalhes
+    if (id === "modalDetalhes") {
+        chatParar();
+        // Reseta o input area para ser remontado na próxima abertura
+        const inputEl = document.getElementById("modal-chat-input-area");
+        if (inputEl) delete inputEl.dataset.mounted;
+    }
+}
 
 document.querySelectorAll(".close").forEach(btn =>
     btn.addEventListener("click", () => closeModal(btn.dataset.modal))
@@ -413,6 +420,8 @@ window.verDetalhes = async function(id) {
         detCarregarRespostas(id, userRole);
 
         openModal("modalDetalhes");
+        // Inicia chat no painel lateral
+        chatIniciar();
     } catch (err) { showError(err.message); }
 };
 
@@ -670,6 +679,8 @@ window.verHistorico = async function(id) {
             <div style="display:none"><!-- fim -->
             </div>`;
         openModal("modalDetalhes");
+        // Inicia chat no painel lateral
+        chatIniciar();
     } catch (err) { showError(err.message); }
 };
 
@@ -1112,13 +1123,15 @@ window.restaurarChamado = async function(id) {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CHAT FLUTUANTE GLOBAL (Suprimentos ↔ Manutenção)
+// CHAT — Painel lateral no modal de detalhes
 // ═══════════════════════════════════════════════════════════════════════════════
-let _chatAberto       = false;
 let _chatUltimoId     = 0;
 let _chatAnexos       = [];
 let _chatPollingTimer = null;
 let _chatNaoLidas     = 0;
+
+// _chatAberto: controla se o painel está visível (sempre true quando modal aberto)
+let _chatAberto = true;
 
 function chatPodeEnviar() {
     const role = api.getUsuarioLogado()?.role || "";
@@ -1127,7 +1140,7 @@ function chatPodeEnviar() {
 
 function chatIniciar() {
     if (!api.isLogado()) return;
-    _chatCriarWidget();
+    _chatMontarInputArea();
     chatPolling();
 }
 
@@ -1147,35 +1160,20 @@ async function chatCarregarNovas() {
         const msgs = await api.listarChat(_chatUltimoId);
         if (!msgs.length) return;
         _chatUltimoId = msgs[msgs.length - 1].id;
-        const lista = document.getElementById("chat-lista");
+        const lista = document.getElementById("modal-chat-lista");
         if (!lista) return;
         msgs.forEach(m => {
+            const vazio = document.getElementById("modal-chat-vazio");
+            if (vazio) vazio.remove();
             const minha = m.autor === api.getUsuarioLogado()?.nome;
             lista.appendChild(_chatCriarBolha(m, minha));
         });
-        // Badge de não lidas quando minimizado
-        if (!_chatAberto) {
-            _chatNaoLidas += msgs.length;
-            _chatAtualizarBadge();
-        } else {
-            _chatScrollBottom();
-        }
+        _chatScrollBottom();
     } catch {}
 }
 
-function _chatAtualizarBadge() {
-    const badge = document.getElementById("chat-badge");
-    if (!badge) return;
-    if (_chatNaoLidas > 0) {
-        badge.textContent = _chatNaoLidas > 99 ? "99+" : _chatNaoLidas;
-        badge.style.display = "flex";
-    } else {
-        badge.style.display = "none";
-    }
-}
-
 function _chatScrollBottom() {
-    const lista = document.getElementById("chat-lista");
+    const lista = document.getElementById("modal-chat-lista");
     if (lista) lista.scrollTop = lista.scrollHeight;
 }
 
@@ -1217,102 +1215,44 @@ window.chatVerAnexo = function(b64enc, nomeEnc, tipoEnc) {
     a.href = base64; a.download = nome; a.click();
 };
 
-function _chatCriarWidget() {
-    if (document.getElementById("chat-widget")) return;
+// Monta a área de input no painel lateral (chamado ao abrir o modal de detalhes)
+function _chatMontarInputArea() {
+    const inputEl = document.getElementById("modal-chat-input-area");
+    if (!inputEl || inputEl.dataset.mounted) return;
+    inputEl.dataset.mounted = "1";
 
-    const role = api.getUsuarioLogado()?.role || "";
     const podeEnviar = chatPodeEnviar();
 
-    const inputArea = podeEnviar ? `
+    if (!podeEnviar) {
+        inputEl.innerHTML = `
+            <div class="chat-somente-leitura">
+                👁️ Apenas Suprimentos e Manutenção podem enviar mensagens.
+            </div>`;
+        return;
+    }
+
+    inputEl.innerHTML = `
         <div class="chat-input-area">
             <div class="chat-anexos-preview" id="chat-anexos-preview"></div>
             <div class="chat-input-row">
                 <button class="chat-btn-anexo" onclick="document.getElementById('chat-file-input').click()" title="Anexar arquivo">📎</button>
                 <input type="file" id="chat-file-input" multiple style="display:none">
                 <textarea id="chat-textarea" class="chat-textarea" rows="1"
-                    placeholder="Mensagem..." onkeydown="chatKeyDown(event)"></textarea>
-                <button class="chat-btn-enviar" onclick="chatEnviar()" title="Enviar">➤</button>
+                    placeholder="Mensagem..." onkeydown="window.chatKeyDown(event)"></textarea>
+                <button class="chat-btn-enviar" onclick="window.chatEnviar()" title="Enviar">➤</button>
             </div>
-        </div>` : `
-        <div class="chat-somente-leitura">
-            👁️ Apenas Suprimentos e Manutenção podem enviar mensagens.
         </div>`;
 
-    const widget = document.createElement("div");
-    widget.id = "chat-widget";
-    widget.className = "chat-widget chat-fechado";
-    widget.innerHTML = `
-        <div class="chat-header" id="chat-header-btn">
-            <div class="chat-header-info">
-                <span class="chat-header-icone">💬</span>
-                <div>
-                    <div class="chat-header-titulo">Chat — Suprimentos & Manutenção</div>
-                    <div class="chat-header-sub">Canal direto entre equipes</div>
-                </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-                <span class="chat-status-dot" title="Online"></span>
-                <span class="chat-toggle-icone" id="chat-toggle-icone">▲</span>
-            </div>
-        </div>
-        <div class="chat-body" id="chat-body">
-            <div class="chat-lista" id="chat-lista">
-                <div class="chat-vazio" id="chat-vazio">
-                    <div style="font-size:2rem;margin-bottom:8px">💬</div>
-                    <p>Nenhuma mensagem ainda.</p>
-                    <p style="font-size:.8rem;opacity:.7">As mensagens ficam visíveis para todos.</p>
-                </div>
-            </div>
-            ${inputArea}
-        </div>`;
-
-    document.body.appendChild(widget);
-
-    // Vincula chatToggle ao header via addEventListener (evita problema de escopo com type="module")
-    document.getElementById("chat-header-btn")?.addEventListener("click", () => window.chatToggle());
-
-    // Badge no botão flutuante
-    const fab = document.createElement("div");
-    fab.id = "chat-fab";
-    fab.className = "chat-fab";
-    fab.title = "Abrir chat";
-    fab.addEventListener("click", () => window.chatToggle());
-    fab.innerHTML = `
-        <span style="font-size:1.4rem">💬</span>
-        <span class="chat-badge" id="chat-badge" style="display:none">0</span>`;
-    document.body.appendChild(fab);
-
-    // Eventos de arquivo
     document.getElementById("chat-file-input")?.addEventListener("change", e => {
         chatAdicionarArquivos(e.target.files);
         e.target.value = "";
     });
 }
 
-window.chatToggle = function() {
-    const widget = document.getElementById("chat-widget");
-    const fab    = document.getElementById("chat-fab");
-    const icone  = document.getElementById("chat-toggle-icone");
-    if (!widget) return;
-
-    _chatAberto = !_chatAberto;
-    widget.classList.toggle("chat-fechado", !_chatAberto);
-    widget.classList.toggle("chat-aberto",   _chatAberto);
-    fab.style.display = _chatAberto ? "none" : "flex";
-
-    if (icone) icone.textContent = _chatAberto ? "▼" : "▲";
-
-    if (_chatAberto) {
-        _chatNaoLidas = 0;
-        _chatAtualizarBadge();
-        setTimeout(_chatScrollBottom, 100);
-    }
-};
-
 window.chatKeyDown = function(e) {
     if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        chatEnviar();
+        window.chatEnviar();
     }
 };
 
@@ -1337,7 +1277,7 @@ function chatRenderizarPreview() {
         <div class="chat-preview-item">
             <span>${nfIcone(a.tipo)}</span>
             <span class="chat-preview-nome">${a.nome}</span>
-            <button onclick="chatRemoverAnexo(${i})" class="chat-preview-rm">✕</button>
+            <button onclick="window.chatRemoverAnexo(${i})" class="chat-preview-rm">✕</button>
         </div>`).join("");
     el.style.display = _chatAnexos.length ? "block" : "none";
 }
@@ -1360,9 +1300,6 @@ window.chatEnviar = async function() {
         if (textarea) textarea.value = "";
         _chatAnexos = [];
         chatRenderizarPreview();
-        // Remove aviso de vazio
-        const vazio = document.getElementById("chat-vazio");
-        if (vazio) vazio.remove();
         await chatCarregarNovas();
     } catch (err) {
         alert("Erro ao enviar: " + err.message);
@@ -1372,8 +1309,3 @@ window.chatEnviar = async function() {
     }
 };
 
-// ─── Inicialização — executado após todas as definições de window.* ────────────
-// Restaura sessão — localStorage persiste entre recarregamentos e reaberturas
-if (api.isLogado()) {
-    mostrarApp();
-}
