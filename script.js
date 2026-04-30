@@ -46,10 +46,12 @@ function mostrarApp() {
 
     updateStats();
     loadManutencoes();
+    chatIniciar();
 }
 
 function mostrarLogin() {
     chatParar();
+    eqChatParar();
     _chatUltimoId = 0; _chatNaoLidas = 0; _chatAnexos = [];
     document.getElementById("appPrincipal").style.display = "none";
     document.getElementById("telaLogin").style.display    = "flex";
@@ -57,10 +59,7 @@ function mostrarLogin() {
     document.getElementById("loginErro").style.display    = "none";
 }
 
-// Restaura sessão — localStorage persiste entre recarregamentos e reaberturas
-if (api.isLogado()) {
-    mostrarApp();
-}
+// Restaura sessão — movido para o final do módulo (ver fim do arquivo)
 
 // Sessão expirada (token JWT venceu) — volta para login sem erro brusco
 window.addEventListener("sessao-expirada", () => {
@@ -132,10 +131,9 @@ function closeModal(id) {
     document.getElementById(id).classList.remove("active");
     // Para o polling do chat quando fechar o modal de detalhes
     if (id === "modalDetalhes") {
-        chatParar();
-        // Reseta o input area para ser remontado na próxima abertura
+        eqChatParar();
         const inputEl = document.getElementById("modal-chat-input-area");
-        if (inputEl) delete inputEl.dataset.mounted;
+        if (inputEl) { inputEl.innerHTML = ""; delete inputEl.dataset.mounted; }
     }
 }
 
@@ -420,8 +418,7 @@ window.verDetalhes = async function(id) {
         detCarregarRespostas(id, userRole);
 
         openModal("modalDetalhes");
-        // Inicia chat no painel lateral
-        chatIniciar();
+        eqChatIniciar(id);
     } catch (err) { showError(err.message); }
 };
 
@@ -679,8 +676,7 @@ window.verHistorico = async function(id) {
             <div style="display:none"><!-- fim -->
             </div>`;
         openModal("modalDetalhes");
-        // Inicia chat no painel lateral
-        chatIniciar();
+        eqChatIniciar(m.id);
     } catch (err) { showError(err.message); }
 };
 
@@ -1123,15 +1119,13 @@ window.restaurarChamado = async function(id) {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CHAT — Painel lateral no modal de detalhes
+// CHAT GLOBAL — Widget flutuante (canal geral)
 // ═══════════════════════════════════════════════════════════════════════════════
 let _chatUltimoId     = 0;
+let _chatNaoLidas     = 0;
 let _chatAnexos       = [];
 let _chatPollingTimer = null;
-let _chatNaoLidas     = 0;
-
-// _chatAberto: controla se o painel está visível (sempre true quando modal aberto)
-let _chatAberto = true;
+let _chatAberto       = false;
 
 function chatPodeEnviar() {
     const role = api.getUsuarioLogado()?.role || "";
@@ -1140,7 +1134,7 @@ function chatPodeEnviar() {
 
 function chatIniciar() {
     if (!api.isLogado()) return;
-    _chatMontarInputArea();
+    if (!document.getElementById("chat-fab")) _chatCriarWidget();
     chatPolling();
 }
 
@@ -1160,30 +1154,43 @@ async function chatCarregarNovas() {
         const msgs = await api.listarChat(_chatUltimoId);
         if (!msgs.length) return;
         _chatUltimoId = msgs[msgs.length - 1].id;
-        const lista = document.getElementById("modal-chat-lista");
+        const lista = document.getElementById("chat-lista");
         if (!lista) return;
         msgs.forEach(m => {
-            const vazio = document.getElementById("modal-chat-vazio");
+            const vazio = document.getElementById("chat-vazio");
             if (vazio) vazio.remove();
             const minha = m.autor === api.getUsuarioLogado()?.nome;
-            lista.appendChild(_chatCriarBolha(m, minha));
+            lista.appendChild(_chatCriarBolha(m, minha, "chat"));
         });
-        _chatScrollBottom();
+        _chatScrollBottom("chat-lista");
+        if (!_chatAberto) {
+            _chatNaoLidas++;
+            _chatAtualizarBadge();
+        }
     } catch {}
 }
 
-function _chatScrollBottom() {
-    const lista = document.getElementById("modal-chat-lista");
+function _chatScrollBottom(listaId) {
+    const lista = document.getElementById(listaId);
     if (lista) lista.scrollTop = lista.scrollHeight;
 }
 
-function _chatCriarBolha(m, minha) {
+function _chatAtualizarBadge() {
+    const badge = document.getElementById("chat-badge");
+    if (!badge) return;
+    if (_chatNaoLidas > 0) {
+        badge.textContent = _chatNaoLidas;
+        badge.style.display = "flex";
+    } else {
+        badge.style.display = "none";
+    }
+}
+
+function _chatCriarBolha(m, minha, prefixo) {
     const wrap = document.createElement("div");
     wrap.className = "chat-msg-wrap " + (minha ? "chat-msg-minha" : "chat-msg-deles");
-
     const hora = m.criado_em ? new Date(m.criado_em).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "";
     const label = m.role === "manutencao" ? "🔧 " + m.autor : "👁️ " + m.autor;
-
     let anexosHtml = "";
     if (m.anexos?.length) {
         anexosHtml = m.anexos.map(a => `
@@ -1196,7 +1203,6 @@ function _chatCriarBolha(m, minha) {
                 <span class="chat-anexo-dl">⬇️</span>
             </div>`).join("");
     }
-
     wrap.innerHTML = `
         <div class="chat-bolha">
             <div class="chat-autor">${label}</div>
@@ -1208,34 +1214,72 @@ function _chatCriarBolha(m, minha) {
 }
 
 window.chatVerAnexo = function(b64enc, nomeEnc, tipoEnc) {
-    const base64 = decodeURIComponent(b64enc);
-    const nome   = decodeURIComponent(nomeEnc);
-    const tipo   = decodeURIComponent(tipoEnc);
     const a = document.createElement("a");
-    a.href = base64; a.download = nome; a.click();
+    a.href = decodeURIComponent(b64enc);
+    a.download = decodeURIComponent(nomeEnc);
+    a.click();
 };
 
-// Monta a área de input no painel lateral (chamado ao abrir o modal de detalhes)
-function _chatMontarInputArea() {
-    const inputEl = document.getElementById("modal-chat-input-area");
+function _chatCriarWidget() {
+    // FAB
+    const fab = document.createElement("div");
+    fab.id = "chat-fab";
+    fab.className = "chat-fab";
+    fab.title = "Chat geral";
+    fab.innerHTML = `<span style="font-size:1.4rem">💬</span>
+        <span class="chat-badge" id="chat-badge" style="display:none">0</span>`;
+    fab.addEventListener("click", () => window.chatToggle());
+    document.body.appendChild(fab);
+
+    // Widget
+    const widget = document.createElement("div");
+    widget.id = "chat-widget";
+    widget.className = "chat-widget chat-fechado";
+    widget.innerHTML = `
+        <div class="chat-header" id="chat-header-btn">
+            <span style="font-size:1.1rem">💬</span>
+            <div>
+                <div style="font-weight:700;font-size:.95rem">Chat Geral</div>
+                <div style="font-size:.75rem;opacity:.7">Suprimentos &amp; Manutenção</div>
+            </div>
+            <button class="chat-fechar-btn" title="Fechar">✕</button>
+        </div>
+        <div class="chat-lista" id="chat-lista">
+            <div class="chat-vazio" id="chat-vazio">
+                <div style="font-size:2rem;margin-bottom:8px">💬</div>
+                <p>Nenhuma mensagem ainda.</p>
+            </div>
+        </div>
+        <div id="chat-input-area"></div>`;
+    document.body.appendChild(widget);
+
+    document.getElementById("chat-header-btn").addEventListener("click", () => window.chatToggle());
+    widget.querySelector(".chat-fechar-btn").addEventListener("click", (e) => { e.stopPropagation(); window.chatToggle(); });
+
+    // Monta input
+    _chatMontarInputGlobal();
+
+    // Scroll ao abrir
+    widget.addEventListener("transitionend", () => {
+        if (_chatAberto) _chatScrollBottom("chat-lista");
+    });
+}
+
+function _chatMontarInputGlobal() {
+    const inputEl = document.getElementById("chat-input-area");
     if (!inputEl || inputEl.dataset.mounted) return;
     inputEl.dataset.mounted = "1";
 
-    const podeEnviar = chatPodeEnviar();
-
-    if (!podeEnviar) {
-        inputEl.innerHTML = `
-            <div class="chat-somente-leitura">
-                👁️ Apenas Suprimentos e Manutenção podem enviar mensagens.
-            </div>`;
+    if (!chatPodeEnviar()) {
+        inputEl.innerHTML = `<div class="chat-somente-leitura">👁️ Apenas Suprimentos e Manutenção podem enviar.</div>`;
         return;
     }
 
     inputEl.innerHTML = `
         <div class="chat-input-area">
-            <div class="chat-anexos-preview" id="chat-anexos-preview"></div>
+            <div class="chat-anexos-preview" id="chat-anexos-preview" style="display:none"></div>
             <div class="chat-input-row">
-                <button class="chat-btn-anexo" onclick="document.getElementById('chat-file-input').click()" title="Anexar arquivo">📎</button>
+                <button class="chat-btn-anexo" onclick="document.getElementById('chat-file-input').click()" title="Anexar">📎</button>
                 <input type="file" id="chat-file-input" multiple style="display:none">
                 <textarea id="chat-textarea" class="chat-textarea" rows="1"
                     placeholder="Mensagem..." onkeydown="window.chatKeyDown(event)"></textarea>
@@ -1249,11 +1293,21 @@ function _chatMontarInputArea() {
     });
 }
 
-window.chatKeyDown = function(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        window.chatEnviar();
+window.chatToggle = function() {
+    const widget = document.getElementById("chat-widget");
+    if (!widget) return;
+    _chatAberto = !_chatAberto;
+    widget.classList.toggle("chat-fechado", !_chatAberto);
+    widget.classList.toggle("chat-aberto", _chatAberto);
+    if (_chatAberto) {
+        _chatNaoLidas = 0;
+        _chatAtualizarBadge();
+        setTimeout(() => _chatScrollBottom("chat-lista"), 100);
     }
+};
+
+window.chatKeyDown = function(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); window.chatEnviar(); }
 };
 
 function chatAdicionarArquivos(files) {
@@ -1289,12 +1343,10 @@ window.chatRemoverAnexo = function(i) {
 
 window.chatEnviar = async function() {
     const textarea = document.getElementById("chat-textarea");
-    const texto    = textarea?.value?.trim() || "";
+    const texto = textarea?.value?.trim() || "";
     if (!texto && !_chatAnexos.length) return;
-
-    const btnEnviar = document.querySelector(".chat-btn-enviar");
-    if (btnEnviar) btnEnviar.disabled = true;
-
+    const btn = document.querySelector(".chat-btn-enviar");
+    if (btn) btn.disabled = true;
     try {
         await api.enviarChat({ texto, anexos: _chatAnexos });
         if (textarea) textarea.value = "";
@@ -1304,8 +1356,183 @@ window.chatEnviar = async function() {
     } catch (err) {
         alert("Erro ao enviar: " + err.message);
     } finally {
-        if (btnEnviar) btnEnviar.disabled = false;
+        if (btn) btn.disabled = false;
         textarea?.focus();
     }
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHAT DO EQUIPAMENTO — Painel lateral no modal de detalhes (usa /respostas)
+// ═══════════════════════════════════════════════════════════════════════════════
+let _eqChatPollingTimer = null;
+let _eqChatUltimoId    = 0;
+let _eqChatManutId     = null;
+let _eqChatAnexos      = [];
+
+function eqChatIniciar(manutencaoId) {
+    _eqChatManutId  = manutencaoId;
+    _eqChatUltimoId = 0;
+    _eqChatAnexos   = [];
+    // Limpa lista
+    const lista = document.getElementById("modal-chat-lista");
+    if (lista) lista.innerHTML = `<div class="chat-vazio" id="modal-chat-vazio">
+        <div style="font-size:2rem;margin-bottom:8px">💬</div>
+        <p>Nenhuma mensagem ainda.</p></div>`;
+    _eqChatMontarInput(manutencaoId);
+    eqChatPolling(manutencaoId);
+}
+
+function eqChatParar() {
+    if (_eqChatPollingTimer) { clearInterval(_eqChatPollingTimer); _eqChatPollingTimer = null; }
+    _eqChatManutId = null;
+}
+
+async function eqChatPolling(manutencaoId) {
+    eqChatParar();
+    _eqChatManutId = manutencaoId;
+    await eqChatCarregarNovas();
+    _eqChatPollingTimer = setInterval(eqChatCarregarNovas, 5000);
+}
+
+async function eqChatCarregarNovas() {
+    if (!_eqChatManutId || !api.isLogado()) return;
+    try {
+        const respostas = await api.listarRespostas(_eqChatManutId);
+        if (!respostas.length) return;
+        // Filtra apenas as que ainda não mostramos (por id)
+        const novas = respostas.filter(r => r.id > _eqChatUltimoId);
+        if (!novas.length) return;
+        _eqChatUltimoId = respostas[respostas.length - 1].id;
+        const lista = document.getElementById("modal-chat-lista");
+        if (!lista) return;
+        novas.forEach(r => {
+            const vazio = document.getElementById("modal-chat-vazio");
+            if (vazio) vazio.remove();
+            const minha = r.autor === api.getUsuarioLogado()?.nome;
+            lista.appendChild(_eqChatCriarBolha(r, minha));
+        });
+        _chatScrollBottom("modal-chat-lista");
+    } catch {}
+}
+
+function _eqChatCriarBolha(r, minha) {
+    const wrap = document.createElement("div");
+    wrap.className = "chat-msg-wrap " + (minha ? "chat-msg-minha" : "chat-msg-deles");
+    const hora = r.criado_em ? new Date(r.criado_em).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "";
+    const label = r.role === "manutencao" ? "🔧 " + r.autor : "👁️ " + r.autor;
+    let anexosHtml = "";
+    if (r.anexos_resposta?.length) {
+        anexosHtml = r.anexos_resposta.map(a => `
+            <div class="chat-anexo" onclick="chatVerAnexo('${encodeURIComponent(a.base64)}','${encodeURIComponent(a.nome)}','${encodeURIComponent(a.tipo)}')">
+                <span class="chat-anexo-icone">${nfIcone(a.tipo)}</span>
+                <div class="chat-anexo-info">
+                    <span class="chat-anexo-nome">${a.nome}</span>
+                    <span class="chat-anexo-meta">${nfFormatarTamanho(a.tamanho)}</span>
+                </div>
+                <span class="chat-anexo-dl">⬇️</span>
+            </div>`).join("");
+    }
+    wrap.innerHTML = `
+        <div class="chat-bolha">
+            <div class="chat-autor">${label}</div>
+            ${r.texto ? `<div class="chat-texto">${r.texto}</div>` : ""}
+            ${anexosHtml}
+            <div class="chat-hora">${hora}</div>
+        </div>`;
+    return wrap;
+}
+
+function _eqChatMontarInput(manutencaoId) {
+    const inputEl = document.getElementById("modal-chat-input-area");
+    if (!inputEl) return;
+    inputEl.dataset.mounted = "1";
+
+    if (!chatPodeEnviar()) {
+        inputEl.innerHTML = `<div class="chat-somente-leitura">👁️ Apenas Suprimentos e Manutenção podem enviar.</div>`;
+        return;
+    }
+
+    inputEl.innerHTML = `
+        <div class="chat-input-area">
+            <div class="chat-anexos-preview" id="eq-chat-preview" style="display:none"></div>
+            <div class="chat-input-row">
+                <button class="chat-btn-anexo" onclick="document.getElementById('eq-chat-file').click()" title="Anexar">📎</button>
+                <input type="file" id="eq-chat-file" multiple style="display:none">
+                <textarea id="eq-chat-textarea" class="chat-textarea" rows="1"
+                    placeholder="Mensagem sobre este equipamento..." onkeydown="window.eqChatKeyDown(event)"></textarea>
+                <button class="chat-btn-enviar" onclick="window.eqChatEnviar()" title="Enviar">➤</button>
+            </div>
+        </div>`;
+
+    document.getElementById("eq-chat-file")?.addEventListener("change", e => {
+        eqChatAdicionarArquivos(e.target.files);
+        e.target.value = "";
+    });
+}
+
+window.eqChatKeyDown = function(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); window.eqChatEnviar(); }
+};
+
+function eqChatAdicionarArquivos(files) {
+    const MAX = 5 * 1024 * 1024;
+    Array.from(files).forEach(file => {
+        if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            _eqChatAnexos.push({ nome: file.name, tipo: file.type, tamanho: file.size,
+                                  data: new Date().toLocaleDateString("pt-BR"), base64: e.target.result });
+            eqChatRenderizarPreview();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function eqChatRenderizarPreview() {
+    const el = document.getElementById("eq-chat-preview");
+    if (!el) return;
+    el.innerHTML = _eqChatAnexos.map((a, i) => `
+        <div class="chat-preview-item">
+            <span>${nfIcone(a.tipo)}</span>
+            <span class="chat-preview-nome">${a.nome}</span>
+            <button onclick="window.eqChatRemoverAnexo(${i})" class="chat-preview-rm">✕</button>
+        </div>`).join("");
+    el.style.display = _eqChatAnexos.length ? "block" : "none";
+}
+
+window.eqChatRemoverAnexo = function(i) {
+    _eqChatAnexos.splice(i, 1);
+    eqChatRenderizarPreview();
+};
+
+window.eqChatEnviar = async function() {
+    if (!_eqChatManutId) return;
+    const textarea = document.getElementById("eq-chat-textarea");
+    const texto = textarea?.value?.trim() || "";
+    if (!texto && !_eqChatAnexos.length) return;
+
+    const userRole = api.getUsuarioLogado()?.role || "";
+    if (userRole === "observador" && !_eqChatAnexos.length) {
+        alert("O Observador deve incluir pelo menos um anexo."); return;
+    }
+
+    const btn = document.querySelector("#modal-chat-input-area .chat-btn-enviar");
+    if (btn) btn.disabled = true;
+    try {
+        await api.criarResposta(_eqChatManutId, { texto, anexos: _eqChatAnexos });
+        if (textarea) textarea.value = "";
+        _eqChatAnexos = [];
+        eqChatRenderizarPreview();
+        await eqChatCarregarNovas();
+    } catch (err) {
+        alert("Erro ao enviar: " + err.message);
+    } finally {
+        if (btn) btn.disabled = false;
+        textarea?.focus();
+    }
+};
+
+// ─── Inicialização — executado após todas as definições de window.* ────────────
+if (api.isLogado()) {
+    mostrarApp();
+}

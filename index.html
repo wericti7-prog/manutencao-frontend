@@ -6,6 +6,240 @@
     <title>Sistema de Manutenção de TI - Supermercado</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="favicon.ico">
+    <style>
+    /* ─── Modal detalhes + chat equipamento ─────────────────── */
+    .modal-detalhes-layout {
+        display: flex;
+        width: 90vw;
+        max-width: 1200px;
+        max-height: 90vh;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    }
+    .modal-detalhes-col {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        max-height: 90vh;
+        border-right: 1px solid #e5e7eb;
+    }
+    .modal-detalhes-col #modalDetalhesContent { flex:1; overflow-y:auto; padding:25px; }
+    .modal-detalhes-col .modal-footer { flex-shrink:0; padding:16px 25px; border-top:1px solid #e5e7eb; display:flex; justify-content:flex-end; }
+    .modal-chat-col {
+        width: 340px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: #f8fafc;
+        max-height: 90vh;
+    }
+    .modal-chat-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        background: var(--primary-color, #3b3fa5);
+        color: #fff;
+        flex-shrink: 0;
+    }
+    .modal-chat-lista {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    #modalDetalhes { align-items:center; justify-content:center; }
+    #modalDetalhes.active { display:flex !important; }
+
+    /* ─── Chat global flutuante ──────────────────────────────── */
+    .chat-fab {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--primary-color, #3b3fa5);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(0,0,0,.25);
+        z-index: 1000;
+        user-select: none;
+    }
+    .chat-badge {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background: #ef4444;
+        color: #fff;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: .72rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .chat-widget {
+        position: fixed;
+        bottom: 90px;
+        right: 24px;
+        width: 340px;
+        max-height: 520px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0,0,0,.18);
+        display: flex;
+        flex-direction: column;
+        z-index: 999;
+        overflow: hidden;
+        transition: opacity .2s, transform .2s;
+    }
+    .chat-fechado { opacity:0; pointer-events:none; transform:translateY(16px); }
+    .chat-aberto  { opacity:1; pointer-events:all; transform:translateY(0); }
+    .chat-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 16px;
+        background: var(--primary-color, #3b3fa5);
+        color: #fff;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .chat-fechar-btn {
+        margin-left: auto;
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 1.1rem;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        opacity: .8;
+    }
+    .chat-fechar-btn:hover { opacity:1; background:rgba(255,255,255,.15); }
+    .chat-lista {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /* ─── Bolhas compartilhadas ──────────────────────────────── */
+    .chat-vazio { text-align:center; color:var(--text-secondary,#6b7280); padding:24px 16px; font-size:.9rem; }
+    .chat-msg-wrap { display:flex; margin-bottom:6px; }
+    .chat-msg-minha { justify-content:flex-end; }
+    .chat-msg-deles { justify-content:flex-start; }
+    .chat-bolha {
+        max-width: 82%;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: .88rem;
+        line-height: 1.4;
+    }
+    .chat-msg-minha .chat-bolha  { background:#3b3fa5; color:#fff; border-bottom-right-radius:3px; }
+    .chat-msg-deles .chat-bolha  { background:#f3f4f6; color:#111; border-bottom-left-radius:3px; }
+    .chat-autor { font-size:.74rem; font-weight:600; margin-bottom:3px; opacity:.8; }
+    .chat-texto { word-break:break-word; }
+    .chat-hora  { font-size:.7rem; opacity:.65; margin-top:4px; text-align:right; }
+    .chat-anexo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255,255,255,.15);
+        border-radius: 8px;
+        padding: 6px 8px;
+        margin-top: 6px;
+        cursor: pointer;
+    }
+    .chat-msg-deles .chat-anexo { background:rgba(0,0,0,.06); }
+    .chat-anexo-nome { font-size:.8rem; font-weight:600; }
+    .chat-anexo-meta { font-size:.72rem; opacity:.7; }
+    .chat-anexo-icone { font-size:1.2rem; }
+    .chat-anexo-dl    { margin-left:auto; font-size:.9rem; }
+
+    /* ─── Input compartilhado ────────────────────────────────── */
+    .chat-input-area { padding:10px 12px; border-top:1px solid #e5e7eb; background:#fff; flex-shrink:0; }
+    .chat-input-row  { display:flex; gap:6px; align-items:flex-end; }
+    .chat-textarea {
+        flex: 1;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: .88rem;
+        resize: none;
+        max-height: 80px;
+        line-height: 1.4;
+        font-family: inherit;
+    }
+    .chat-textarea:focus { outline:none; border-color:var(--primary-color,#3b3fa5); }
+    .chat-btn-enviar {
+        background: var(--primary-color,#3b3fa5);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        cursor: pointer;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .chat-btn-enviar:disabled { opacity:.5; cursor:not-allowed; }
+    .chat-btn-anexo {
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        cursor: pointer;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .chat-btn-anexo:hover { background:#e5e7eb; }
+    .chat-preview-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #f3f4f6;
+        border-radius: 6px;
+        padding: 4px 8px;
+        margin-bottom: 4px;
+        font-size: .82rem;
+    }
+    .chat-preview-nome { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .chat-preview-rm   { background:none; border:none; cursor:pointer; color:#ef4444; font-size:.9rem; padding:0 2px; }
+    .chat-somente-leitura {
+        padding: 12px 16px;
+        font-size: .83rem;
+        color: var(--text-secondary,#6b7280);
+        border-top: 1px solid #e5e7eb;
+        text-align: center;
+    }
+    /* ─── Responsivo ─────────────────────────────────────────── */
+    @media (max-width: 768px) {
+        .modal-detalhes-layout { flex-direction:column; width:98vw; max-height:95vh; }
+        .modal-chat-col { width:100%; max-height:260px; border-top:1px solid #e5e7eb; }
+        .chat-widget { width:calc(100vw - 32px); right:16px; }
+    }
+    </style>
 </head>
 <body>
 
@@ -427,16 +661,36 @@
         </div>
     </div>
 
-    <!-- ===== MODAL — Detalhes ===== -->
+    <!-- ===== MODAL — Detalhes + Chat do Equipamento ===== -->
     <div id="modalDetalhes" class="modal">
-        <div class="modal-content modal-wide">
-            <div class="modal-header">
-                <h3 id="modalDetalhesTitle">Detalhes da Manutenção</h3>
-                <span class="close" data-modal="modalDetalhes">&times;</span>
+        <div class="modal-detalhes-layout">
+            <!-- Coluna esquerda: detalhes -->
+            <div class="modal-detalhes-col">
+                <div class="modal-header">
+                    <h3 id="modalDetalhesTitle">Detalhes da Manutenção</h3>
+                    <span class="close" data-modal="modalDetalhes">&times;</span>
+                </div>
+                <div id="modalDetalhesContent" style="padding:25px;overflow-y:auto;flex:1;"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal="modalDetalhes">Fechar</button>
+                </div>
             </div>
-            <div id="modalDetalhesContent" style="padding:25px;"></div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-modal="modalDetalhes">Fechar</button>
+            <!-- Coluna direita: chat do equipamento -->
+            <div class="modal-chat-col" id="modalChatCol">
+                <div class="modal-chat-header">
+                    <span style="font-size:1.1rem">🔧</span>
+                    <div>
+                        <div style="font-weight:700;font-size:.95rem">Chat do Equipamento</div>
+                        <div style="font-size:.75rem;opacity:.7">Conversa individual deste chamado</div>
+                    </div>
+                </div>
+                <div class="modal-chat-lista" id="modal-chat-lista">
+                    <div class="chat-vazio" id="modal-chat-vazio">
+                        <div style="font-size:2rem;margin-bottom:8px">💬</div>
+                        <p>Nenhuma mensagem ainda.</p>
+                    </div>
+                </div>
+                <div id="modal-chat-input-area"></div>
             </div>
         </div>
     </div>
