@@ -59,7 +59,10 @@ function mostrarLogin() {
     document.getElementById("loginErro").style.display    = "none";
 }
 
-// Restaura sessão — movido para o final do módulo (ver fim do arquivo)
+// Restaura sessão — localStorage persiste entre recarregamentos e reaberturas
+if (api.isLogado()) {
+    mostrarApp();
+}
 
 // Sessão expirada (token JWT venceu) — volta para login sem erro brusco
 window.addEventListener("sessao-expirada", () => {
@@ -129,7 +132,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 function openModal(id)  { document.getElementById(id).classList.add("active"); }
 function closeModal(id) {
     document.getElementById(id).classList.remove("active");
-    // Para o polling do chat quando fechar o modal de detalhes
     if (id === "modalDetalhes") {
         eqChatParar();
         const inputEl = document.getElementById("modal-chat-input-area");
@@ -610,10 +612,6 @@ window.respEnviar = async function(id, userRole) {
     if (!texto && !anexos.length) {
         alert("Digite uma mensagem ou adicione pelo menos um anexo."); return;
     }
-    if (userRole === "observador" && !anexos.length) {
-        alert("O Observador deve incluir pelo menos um anexo na resposta."); return;
-    }
-
     try {
         await api.criarResposta(id, { texto, anexos });
         alert("Resposta enviada com sucesso!");
@@ -1127,7 +1125,7 @@ let _chatAnexos       = [];
 let _chatPollingTimer = null;
 let _chatAberto       = false;
 
-function chatPodeEnviar() {
+function chatPodeEnviarGlobal() {
     const role = api.getUsuarioLogado()?.role || "";
     return ["observador", "manutencao"].includes(role);
 }
@@ -1160,7 +1158,7 @@ async function chatCarregarNovas() {
             const vazio = document.getElementById("chat-vazio");
             if (vazio) vazio.remove();
             const minha = m.autor === api.getUsuarioLogado()?.nome;
-            lista.appendChild(_chatCriarBolha(m, minha, "chat"));
+            lista.appendChild(_chatCriarBolha(m, minha));
         });
         _chatScrollBottom("chat-lista");
         if (!_chatAberto) {
@@ -1186,7 +1184,7 @@ function _chatAtualizarBadge() {
     }
 }
 
-function _chatCriarBolha(m, minha, prefixo) {
+function _chatCriarBolha(m, minha) {
     const wrap = document.createElement("div");
     wrap.className = "chat-msg-wrap " + (minha ? "chat-msg-minha" : "chat-msg-deles");
     const hora = m.criado_em ? new Date(m.criado_em).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "";
@@ -1221,7 +1219,6 @@ window.chatVerAnexo = function(b64enc, nomeEnc, tipoEnc) {
 };
 
 function _chatCriarWidget() {
-    // FAB
     const fab = document.createElement("div");
     fab.id = "chat-fab";
     fab.className = "chat-fab";
@@ -1231,7 +1228,6 @@ function _chatCriarWidget() {
     fab.addEventListener("click", () => window.chatToggle());
     document.body.appendChild(fab);
 
-    // Widget
     const widget = document.createElement("div");
     widget.id = "chat-widget";
     widget.className = "chat-widget chat-fechado";
@@ -1254,15 +1250,12 @@ function _chatCriarWidget() {
     document.body.appendChild(widget);
 
     document.getElementById("chat-header-btn").addEventListener("click", () => window.chatToggle());
-    widget.querySelector(".chat-fechar-btn").addEventListener("click", (e) => { e.stopPropagation(); window.chatToggle(); });
-
-    // Monta input
-    _chatMontarInputGlobal();
-
-    // Scroll ao abrir
-    widget.addEventListener("transitionend", () => {
-        if (_chatAberto) _chatScrollBottom("chat-lista");
+    widget.querySelector(".chat-fechar-btn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        window.chatToggle();
     });
+
+    _chatMontarInputGlobal();
 }
 
 function _chatMontarInputGlobal() {
@@ -1270,8 +1263,8 @@ function _chatMontarInputGlobal() {
     if (!inputEl || inputEl.dataset.mounted) return;
     inputEl.dataset.mounted = "1";
 
-    if (!chatPodeEnviar()) {
-        inputEl.innerHTML = `<div class="chat-somente-leitura">👁️ Apenas Suprimentos e Manutenção podem enviar.</div>`;
+    if (!chatPodeEnviarGlobal()) {
+        inputEl.innerHTML = `<div class="chat-somente-leitura">👁️ Apenas Suprimentos e Manutenção podem enviar no chat geral.</div>`;
         return;
     }
 
@@ -1345,7 +1338,7 @@ window.chatEnviar = async function() {
     const textarea = document.getElementById("chat-textarea");
     const texto = textarea?.value?.trim() || "";
     if (!texto && !_chatAnexos.length) return;
-    const btn = document.querySelector(".chat-btn-enviar");
+    const btn = document.querySelector("#chat-input-area .chat-btn-enviar");
     if (btn) btn.disabled = true;
     try {
         await api.enviarChat({ texto, anexos: _chatAnexos });
@@ -1363,6 +1356,8 @@ window.chatEnviar = async function() {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CHAT DO EQUIPAMENTO — Painel lateral no modal de detalhes (usa /respostas)
+// Todos os perfis podem visualizar e enviar mensagens.
+// Anexos aparecem também na aba Mensagens; textos ficam apenas aqui.
 // ═══════════════════════════════════════════════════════════════════════════════
 let _eqChatPollingTimer = null;
 let _eqChatUltimoId    = 0;
@@ -1373,12 +1368,11 @@ function eqChatIniciar(manutencaoId) {
     _eqChatManutId  = manutencaoId;
     _eqChatUltimoId = 0;
     _eqChatAnexos   = [];
-    // Limpa lista
     const lista = document.getElementById("modal-chat-lista");
     if (lista) lista.innerHTML = `<div class="chat-vazio" id="modal-chat-vazio">
         <div style="font-size:2rem;margin-bottom:8px">💬</div>
         <p>Nenhuma mensagem ainda.</p></div>`;
-    _eqChatMontarInput(manutencaoId);
+    _eqChatMontarInput();
     eqChatPolling(manutencaoId);
 }
 
@@ -1399,7 +1393,6 @@ async function eqChatCarregarNovas() {
     try {
         const respostas = await api.listarRespostas(_eqChatManutId);
         if (!respostas.length) return;
-        // Filtra apenas as que ainda não mostramos (por id)
         const novas = respostas.filter(r => r.id > _eqChatUltimoId);
         if (!novas.length) return;
         _eqChatUltimoId = respostas[respostas.length - 1].id;
@@ -1419,7 +1412,10 @@ function _eqChatCriarBolha(r, minha) {
     const wrap = document.createElement("div");
     wrap.className = "chat-msg-wrap " + (minha ? "chat-msg-minha" : "chat-msg-deles");
     const hora = r.criado_em ? new Date(r.criado_em).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "";
-    const label = r.role === "manutencao" ? "🔧 " + r.autor : "👁️ " + r.autor;
+    const label = r.role === "manutencao" ? "🔧 " + r.autor
+                : r.role === "observador" ? "👁️ " + r.autor
+                : r.role === "gerencia"   ? "👔 " + r.autor
+                : "👤 " + r.autor;
     let anexosHtml = "";
     if (r.anexos_resposta?.length) {
         anexosHtml = r.anexos_resposta.map(a => `
@@ -1442,16 +1438,14 @@ function _eqChatCriarBolha(r, minha) {
     return wrap;
 }
 
-function _eqChatMontarInput(manutencaoId) {
+function _eqChatMontarInput() {
     const inputEl = document.getElementById("modal-chat-input-area");
     if (!inputEl) return;
+    inputEl.innerHTML = "";
+    delete inputEl.dataset.mounted;
     inputEl.dataset.mounted = "1";
 
-    if (!chatPodeEnviar()) {
-        inputEl.innerHTML = `<div class="chat-somente-leitura">👁️ Apenas Suprimentos e Manutenção podem enviar.</div>`;
-        return;
-    }
-
+    // Todos os perfis podem enviar no chat do equipamento
     inputEl.innerHTML = `
         <div class="chat-input-area">
             <div class="chat-anexos-preview" id="eq-chat-preview" style="display:none"></div>
@@ -1510,12 +1504,6 @@ window.eqChatEnviar = async function() {
     const textarea = document.getElementById("eq-chat-textarea");
     const texto = textarea?.value?.trim() || "";
     if (!texto && !_eqChatAnexos.length) return;
-
-    const userRole = api.getUsuarioLogado()?.role || "";
-    if (userRole === "observador" && !_eqChatAnexos.length) {
-        alert("O Observador deve incluir pelo menos um anexo."); return;
-    }
-
     const btn = document.querySelector("#modal-chat-input-area .chat-btn-enviar");
     if (btn) btn.disabled = true;
     try {
