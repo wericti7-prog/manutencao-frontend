@@ -286,8 +286,8 @@ tfoot td {
 /* Novas cores para os status do sistema */
 .badge-operacional      { background-color: #d1fae5; color: #065f46; }      /* Verde - Operacional */
 .badge-em-manutencao    { background-color: #fed7aa; color: #92400e; }      /* Laranja - Em Manutenção */
-.badge-aguardando-pecas    { background-color: #fef3c7; color: #b45309; }      /* Amarelo - Aguardando Peças */
-.badge-aguardando-aprovacao { background-color: #ede9fe; color: #6d28d9; }     /* Roxo  - Aguardando Aprovação */
+.badge-aguardando-pecas    { background-color: #dbeafe; color: #1e40af; }      /* Azul   - Aguardando Peças */
+.badge-aguardando-aprovacao { background-color: #fef3c7; color: #b45309; }     /* Amarelo - Aguardando Aprovação */
 .badge-fora-operacao    { background-color: #fee2e2; color: #991b1b; }      /* Vermelho - Fora de Operação */
 
 /* ---- Modal ---- */
