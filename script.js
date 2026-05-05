@@ -46,10 +46,12 @@ function mostrarApp() {
 
     updateStats();
     loadManutencoes();
+    chatIniciar();
 }
 
 function mostrarLogin() {
     chatParar();
+    eqChatParar();
     _chatUltimoId = 0; _chatNaoLidas = 0; _chatAnexos = [];
     document.getElementById("appPrincipal").style.display = "none";
     document.getElementById("telaLogin").style.display    = "flex";
@@ -130,12 +132,10 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 function openModal(id)  { document.getElementById(id).classList.add("active"); }
 function closeModal(id) {
     document.getElementById(id).classList.remove("active");
-    // Para o polling do chat quando fechar o modal de detalhes
     if (id === "modalDetalhes") {
-        chatParar();
-        // Reseta o input area para ser remontado na próxima abertura
+        eqChatParar();
         const inputEl = document.getElementById("modal-chat-input-area");
-        if (inputEl) delete inputEl.dataset.mounted;
+        if (inputEl) { inputEl.innerHTML = ""; delete inputEl.dataset.mounted; }
     }
 }
 
@@ -420,8 +420,7 @@ window.verDetalhes = async function(id) {
         detCarregarRespostas(id, userRole);
 
         openModal("modalDetalhes");
-        // Inicia chat no painel lateral
-        chatIniciar();
+        eqChatIniciar(id);
     } catch (err) { showError(err.message); }
 };
 
@@ -679,8 +678,7 @@ window.verHistorico = async function(id) {
             <div style="display:none"><!-- fim -->
             </div>`;
         openModal("modalDetalhes");
-        // Inicia chat no painel lateral
-        chatIniciar();
+        eqChatIniciar(m.id);
     } catch (err) { showError(err.message); }
 };
 
@@ -1123,70 +1121,77 @@ window.restaurarChamado = async function(id) {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CHAT — Painel lateral no modal de detalhes
+// CHAT GLOBAL — Widget flutuante no canto inferior direito
 // ═══════════════════════════════════════════════════════════════════════════════
 let _chatUltimoId     = 0;
+let _chatNaoLidas     = 0;
 let _chatAnexos       = [];
 let _chatPollingTimer = null;
-let _chatNaoLidas     = 0;
+let _chatAberto       = false;
 
-// _chatAberto: controla se o painel está visível (sempre true quando modal aberto)
-let _chatAberto = true;
-
-function chatPodeEnviar() {
+function chatPodeEnviarGlobal() {
     const role = api.getUsuarioLogado()?.role || "";
     return ["observador", "manutencao"].includes(role);
 }
 
 function chatIniciar() {
     if (!api.isLogado()) return;
-    _chatMontarInputArea();
-    chatPolling();
+    if (!document.getElementById("chat-fab")) _chatCriarWidget();
+    _chatPolling();
 }
 
 function chatParar() {
     if (_chatPollingTimer) { clearInterval(_chatPollingTimer); _chatPollingTimer = null; }
 }
 
-async function chatPolling() {
+async function _chatPolling() {
     chatParar();
-    await chatCarregarNovas();
-    _chatPollingTimer = setInterval(chatCarregarNovas, 5000);
+    await _chatCarregarNovas();
+    _chatPollingTimer = setInterval(_chatCarregarNovas, 5000);
 }
 
-async function chatCarregarNovas() {
+async function _chatCarregarNovas() {
     if (!api.isLogado()) return;
     try {
         const msgs = await api.listarChat(_chatUltimoId);
         if (!msgs.length) return;
         _chatUltimoId = msgs[msgs.length - 1].id;
-        const lista = document.getElementById("modal-chat-lista");
+        const lista = document.getElementById("chat-lista");
         if (!lista) return;
         msgs.forEach(m => {
-            const vazio = document.getElementById("modal-chat-vazio");
+            const vazio = document.getElementById("chat-vazio");
             if (vazio) vazio.remove();
             const minha = m.autor === api.getUsuarioLogado()?.nome;
-            lista.appendChild(_chatCriarBolha(m, minha));
+            lista.appendChild(_chatBolha(m.autor, m.role, m.texto, m.criado_em, m.anexos || [], minha, "chat"));
         });
-        _chatScrollBottom();
+        _chatScrollBottom("chat-lista");
+        if (!_chatAberto) { _chatNaoLidas++; _chatAtualizarBadge(); }
     } catch {}
 }
 
-function _chatScrollBottom() {
-    const lista = document.getElementById("modal-chat-lista");
-    if (lista) lista.scrollTop = lista.scrollHeight;
+function _chatScrollBottom(listaId) {
+    const el = document.getElementById(listaId);
+    if (el) el.scrollTop = el.scrollHeight;
 }
 
-function _chatCriarBolha(m, minha) {
+function _chatAtualizarBadge() {
+    const badge = document.getElementById("chat-badge");
+    if (!badge) return;
+    badge.textContent = _chatNaoLidas;
+    badge.style.display = _chatNaoLidas > 0 ? "flex" : "none";
+}
+
+function _chatBolha(autor, role, texto, criado_em, anexos, minha, prefixo) {
     const wrap = document.createElement("div");
     wrap.className = "chat-msg-wrap " + (minha ? "chat-msg-minha" : "chat-msg-deles");
-
-    const hora = m.criado_em ? new Date(m.criado_em).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "";
-    const label = m.role === "manutencao" ? "🔧 " + m.autor : "👁️ " + m.autor;
-
+    const hora = criado_em ? new Date(criado_em).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "";
+    const label = role === "manutencao" ? "🔧 " + autor
+                : role === "observador" ? "👁️ " + autor
+                : role === "gerencia"   ? "👔 " + autor
+                : "👤 " + autor;
     let anexosHtml = "";
-    if (m.anexos?.length) {
-        anexosHtml = m.anexos.map(a => `
+    if (anexos?.length) {
+        anexosHtml = anexos.map(a => `
             <div class="chat-anexo" onclick="chatVerAnexo('${encodeURIComponent(a.base64)}','${encodeURIComponent(a.nome)}','${encodeURIComponent(a.tipo)}')">
                 <span class="chat-anexo-icone">${nfIcone(a.tipo)}</span>
                 <div class="chat-anexo-info">
@@ -1196,11 +1201,10 @@ function _chatCriarBolha(m, minha) {
                 <span class="chat-anexo-dl">⬇️</span>
             </div>`).join("");
     }
-
     wrap.innerHTML = `
         <div class="chat-bolha">
             <div class="chat-autor">${label}</div>
-            ${m.texto ? `<div class="chat-texto">${m.texto}</div>` : ""}
+            ${texto ? `<div class="chat-texto">${texto}</div>` : ""}
             ${anexosHtml}
             <div class="chat-hora">${hora}</div>
         </div>`;
@@ -1208,69 +1212,108 @@ function _chatCriarBolha(m, minha) {
 }
 
 window.chatVerAnexo = function(b64enc, nomeEnc, tipoEnc) {
-    const base64 = decodeURIComponent(b64enc);
-    const nome   = decodeURIComponent(nomeEnc);
-    const tipo   = decodeURIComponent(tipoEnc);
     const a = document.createElement("a");
-    a.href = base64; a.download = nome; a.click();
+    a.href = decodeURIComponent(b64enc);
+    a.download = decodeURIComponent(nomeEnc);
+    a.click();
 };
 
-// Monta a área de input no painel lateral (chamado ao abrir o modal de detalhes)
-function _chatMontarInputArea() {
-    const inputEl = document.getElementById("modal-chat-input-area");
-    if (!inputEl || inputEl.dataset.mounted) return;
-    inputEl.dataset.mounted = "1";
+function _chatCriarWidget() {
+    // FAB
+    const fab = document.createElement("div");
+    fab.id = "chat-fab";
+    fab.className = "chat-fab";
+    fab.innerHTML = `<span style="font-size:1.4rem">💬</span>
+        <span class="chat-badge" id="chat-badge" style="display:none">0</span>`;
+    fab.addEventListener("click", () => window.chatToggle());
+    document.body.appendChild(fab);
 
-    const podeEnviar = chatPodeEnviar();
+    // Widget
+    const widget = document.createElement("div");
+    widget.id = "chat-widget";
+    widget.className = "chat-widget chat-fechado";
+    widget.innerHTML = `
+        <div class="chat-header" id="chat-header-btn">
+            <span style="font-size:1.1rem">💬</span>
+            <div>
+                <div style="font-weight:700;font-size:.95rem">Chat Geral</div>
+                <div style="font-size:.75rem;opacity:.7">Suprimentos &amp; Manutenção</div>
+            </div>
+            <button class="chat-fechar-btn" title="Fechar">✕</button>
+        </div>
+        <div class="chat-lista" id="chat-lista">
+            <div class="chat-vazio" id="chat-vazio">
+                <div style="font-size:2rem;margin-bottom:8px">💬</div>
+                <p>Nenhuma mensagem ainda.</p>
+            </div>
+        </div>
+        <div id="chat-input-area"></div>`;
+    document.body.appendChild(widget);
 
-    if (!podeEnviar) {
-        inputEl.innerHTML = `
-            <div class="chat-somente-leitura">
-                👁️ Apenas Suprimentos e Manutenção podem enviar mensagens.
-            </div>`;
+    document.getElementById("chat-header-btn").addEventListener("click", () => window.chatToggle());
+    widget.querySelector(".chat-fechar-btn").addEventListener("click", e => {
+        e.stopPropagation(); window.chatToggle();
+    });
+
+    _chatMontarInputGlobal();
+}
+
+function _chatMontarInputGlobal() {
+    const el = document.getElementById("chat-input-area");
+    if (!el || el.dataset.mounted) return;
+    el.dataset.mounted = "1";
+    if (!chatPodeEnviarGlobal()) {
+        el.innerHTML = `<div class="chat-somente-leitura">👁️ Apenas Suprimentos e Manutenção podem enviar no chat geral.</div>`;
         return;
     }
-
-    inputEl.innerHTML = `
+    el.innerHTML = `
         <div class="chat-input-area">
-            <div class="chat-anexos-preview" id="chat-anexos-preview"></div>
+            <div class="chat-anexos-preview" id="chat-anexos-preview" style="display:none"></div>
             <div class="chat-input-row">
-                <button class="chat-btn-anexo" onclick="document.getElementById('chat-file-input').click()" title="Anexar arquivo">📎</button>
+                <button class="chat-btn-anexo" onclick="document.getElementById('chat-file-input').click()" title="Anexar">📎</button>
                 <input type="file" id="chat-file-input" multiple style="display:none">
                 <textarea id="chat-textarea" class="chat-textarea" rows="1"
                     placeholder="Mensagem..." onkeydown="window.chatKeyDown(event)"></textarea>
                 <button class="chat-btn-enviar" onclick="window.chatEnviar()" title="Enviar">➤</button>
             </div>
         </div>`;
-
     document.getElementById("chat-file-input")?.addEventListener("change", e => {
-        chatAdicionarArquivos(e.target.files);
-        e.target.value = "";
+        _chatAdicionarArquivos(e.target.files); e.target.value = "";
     });
 }
 
-window.chatKeyDown = function(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        window.chatEnviar();
+window.chatToggle = function() {
+    const widget = document.getElementById("chat-widget");
+    if (!widget) return;
+    _chatAberto = !_chatAberto;
+    widget.classList.toggle("chat-fechado", !_chatAberto);
+    widget.classList.toggle("chat-aberto",  _chatAberto);
+    if (_chatAberto) {
+        _chatNaoLidas = 0;
+        _chatAtualizarBadge();
+        setTimeout(() => _chatScrollBottom("chat-lista"), 100);
     }
 };
 
-function chatAdicionarArquivos(files) {
+window.chatKeyDown = function(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); window.chatEnviar(); }
+};
+
+function _chatAdicionarArquivos(files) {
     const MAX = 5 * 1024 * 1024;
     Array.from(files).forEach(file => {
         if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); return; }
         const reader = new FileReader();
-        reader.onload = e => {
+        reader.onload = ev => {
             _chatAnexos.push({ nome: file.name, tipo: file.type, tamanho: file.size,
-                               data: new Date().toLocaleDateString("pt-BR"), base64: e.target.result });
-            chatRenderizarPreview();
+                               data: new Date().toLocaleDateString("pt-BR"), base64: ev.target.result });
+            _chatRenderizarPreview();
         };
         reader.readAsDataURL(file);
     });
 }
 
-function chatRenderizarPreview() {
+function _chatRenderizarPreview() {
     const el = document.getElementById("chat-anexos-preview");
     if (!el) return;
     el.innerHTML = _chatAnexos.map((a, i) => `
@@ -1282,30 +1325,162 @@ function chatRenderizarPreview() {
     el.style.display = _chatAnexos.length ? "block" : "none";
 }
 
-window.chatRemoverAnexo = function(i) {
-    _chatAnexos.splice(i, 1);
-    chatRenderizarPreview();
-};
+window.chatRemoverAnexo = function(i) { _chatAnexos.splice(i, 1); _chatRenderizarPreview(); };
 
 window.chatEnviar = async function() {
     const textarea = document.getElementById("chat-textarea");
-    const texto    = textarea?.value?.trim() || "";
+    const texto = textarea?.value?.trim() || "";
     if (!texto && !_chatAnexos.length) return;
-
-    const btnEnviar = document.querySelector(".chat-btn-enviar");
-    if (btnEnviar) btnEnviar.disabled = true;
-
+    const btn = document.querySelector("#chat-input-area .chat-btn-enviar");
+    if (btn) btn.disabled = true;
     try {
         await api.enviarChat({ texto, anexos: _chatAnexos });
         if (textarea) textarea.value = "";
         _chatAnexos = [];
-        chatRenderizarPreview();
-        await chatCarregarNovas();
-    } catch (err) {
-        alert("Erro ao enviar: " + err.message);
-    } finally {
-        if (btnEnviar) btnEnviar.disabled = false;
+        _chatRenderizarPreview();
+        await _chatCarregarNovas();
+    } catch (err) { alert("Erro ao enviar: " + err.message); }
+    finally {
+        if (btn) btn.disabled = false;
         textarea?.focus();
     }
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHAT DO EQUIPAMENTO — Painel lateral no modal de detalhes
+// Usa /manutencoes/{id}/respostas — conversa individual por chamado
+// Todos os perfis podem visualizar e enviar mensagens
+// ═══════════════════════════════════════════════════════════════════════════════
+let _eqChatTimer   = null;
+let _eqChatId      = null;   // ID da manutenção atual
+let _eqChatAnexos  = [];
+
+function eqChatIniciar(manutencaoId) {
+    _eqChatId     = manutencaoId;
+    _eqChatAnexos = [];
+    // Limpa lista e mostra vazio
+    const lista = document.getElementById("modal-chat-lista");
+    if (lista) lista.innerHTML = `
+        <div class="chat-vazio" id="modal-chat-vazio">
+            <div style="font-size:2rem;margin-bottom:8px">💬</div>
+            <p>Nenhuma mensagem ainda.</p>
+        </div>`;
+    _eqChatMontarInput();
+    _eqChatCarregarTodas();   // carrega histório completo primeiro
+    // Polling para novas mensagens
+    if (_eqChatTimer) clearInterval(_eqChatTimer);
+    _eqChatTimer = setInterval(_eqChatCarregarTodas, 5000);
+}
+
+function eqChatParar() {
+    if (_eqChatTimer) { clearInterval(_eqChatTimer); _eqChatTimer = null; }
+    _eqChatId = null;
+}
+
+// Carrega TODAS as respostas do equipamento (histórico + novas)
+async function _eqChatCarregarTodas() {
+    if (!_eqChatId || !api.isLogado()) return;
+    try {
+        const respostas = await api.listarRespostas(_eqChatId);
+        const lista = document.getElementById("modal-chat-lista");
+        if (!lista) return;
+        // Re-renderiza tudo para garantir consistência
+        lista.innerHTML = "";
+        if (!respostas.length) {
+            lista.innerHTML = `
+                <div class="chat-vazio" id="modal-chat-vazio">
+                    <div style="font-size:2rem;margin-bottom:8px">💬</div>
+                    <p>Nenhuma mensagem ainda.</p>
+                </div>`;
+            return;
+        }
+        respostas.forEach(r => {
+            const minha = r.autor === api.getUsuarioLogado()?.nome;
+            lista.appendChild(_chatBolha(
+                r.autor, r.role, r.texto, r.criado_em,
+                r.anexos_resposta || [], minha, "eq"
+            ));
+        });
+        _chatScrollBottom("modal-chat-lista");
+    } catch {}
+}
+
+function _eqChatMontarInput() {
+    const el = document.getElementById("modal-chat-input-area");
+    if (!el) return;
+    el.innerHTML = "";
+    delete el.dataset.mounted;
+    el.dataset.mounted = "1";
+    // Todos os perfis podem enviar
+    el.innerHTML = `
+        <div class="chat-input-area">
+            <div class="chat-anexos-preview" id="eq-chat-preview" style="display:none"></div>
+            <div class="chat-input-row">
+                <button class="chat-btn-anexo" onclick="document.getElementById('eq-chat-file').click()" title="Anexar">📎</button>
+                <input type="file" id="eq-chat-file" multiple style="display:none">
+                <textarea id="eq-chat-textarea" class="chat-textarea" rows="1"
+                    placeholder="Mensagem sobre este equipamento..." onkeydown="window.eqChatKeyDown(event)"></textarea>
+                <button class="chat-btn-enviar" onclick="window.eqChatEnviar()" title="Enviar">➤</button>
+            </div>
+        </div>`;
+    document.getElementById("eq-chat-file")?.addEventListener("change", e => {
+        _eqAdicionarArquivos(e.target.files); e.target.value = "";
+    });
+}
+
+window.eqChatKeyDown = function(e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); window.eqChatEnviar(); }
+};
+
+function _eqAdicionarArquivos(files) {
+    const MAX = 5 * 1024 * 1024;
+    Array.from(files).forEach(file => {
+        if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); return; }
+        const reader = new FileReader();
+        reader.onload = ev => {
+            _eqChatAnexos.push({ nome: file.name, tipo: file.type, tamanho: file.size,
+                                  data: new Date().toLocaleDateString("pt-BR"), base64: ev.target.result });
+            _eqRenderizarPreview();
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function _eqRenderizarPreview() {
+    const el = document.getElementById("eq-chat-preview");
+    if (!el) return;
+    el.innerHTML = _eqChatAnexos.map((a, i) => `
+        <div class="chat-preview-item">
+            <span>${nfIcone(a.tipo)}</span>
+            <span class="chat-preview-nome">${a.nome}</span>
+            <button onclick="window.eqChatRemoverAnexo(${i})" class="chat-preview-rm">✕</button>
+        </div>`).join("");
+    el.style.display = _eqChatAnexos.length ? "block" : "none";
+}
+
+window.eqChatRemoverAnexo = function(i) { _eqChatAnexos.splice(i, 1); _eqRenderizarPreview(); };
+
+window.eqChatEnviar = async function() {
+    if (!_eqChatId) return;
+    const textarea = document.getElementById("eq-chat-textarea");
+    const texto = textarea?.value?.trim() || "";
+    if (!texto && !_eqChatAnexos.length) return;
+    const btn = document.querySelector("#modal-chat-input-area .chat-btn-enviar");
+    if (btn) btn.disabled = true;
+    try {
+        await api.criarResposta(_eqChatId, { texto, anexos: _eqChatAnexos });
+        if (textarea) textarea.value = "";
+        _eqChatAnexos = [];
+        _eqRenderizarPreview();
+        await _eqChatCarregarTodas();
+    } catch (err) { alert("Erro ao enviar: " + err.message); }
+    finally {
+        if (btn) btn.disabled = false;
+        textarea?.focus();
+    }
+};
+
+// ─── Inicialização — executado após todas as definições de window.* ────────────
+if (api.isLogado()) {
+    mostrarApp();
+}
