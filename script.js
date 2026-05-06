@@ -1,6 +1,16 @@
 // STAGING — importa api.js local desta pasta (staging/api.js)
 import * as api from "./api.js";
 
+// ─── Variáveis globais de chat ─────────────────────────────────────────────────
+let _chatUltimoId     = 0;
+let _chatNaoLidas     = 0;
+let _chatAnexos       = [];
+let _chatPollingTimer = null;
+let _chatAberto       = false;
+let _eqChatTimer      = null;
+let _eqChatId         = null;
+let _eqChatAnexos     = [];
+
 // ─── Utilitários ───────────────────────────────────────────────────────────────
 const formatDate     = d => d ? new Date(d).toLocaleDateString("pt-BR") : "-";
 const formatDateTime = d => d ? new Date(d).toLocaleString("pt-BR")     : "-";
@@ -60,9 +70,7 @@ function mostrarLogin() {
 }
 
 // Restaura sessão — localStorage persiste entre recarregamentos e reaberturas
-if (api.isLogado()) {
-    mostrarApp();
-}
+
 
 // Sessão expirada (token JWT venceu) — volta para login sem erro brusco
 window.addEventListener("sessao-expirada", () => {
@@ -1123,11 +1131,7 @@ window.restaurarChamado = async function(id) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // CHAT GLOBAL — Widget flutuante no canto inferior direito
 // ═══════════════════════════════════════════════════════════════════════════════
-let _chatUltimoId     = 0;
-let _chatNaoLidas     = 0;
-let _chatAnexos       = [];
-let _chatPollingTimer = null;
-let _chatAberto       = false;
+// (variáveis declaradas no topo do arquivo)
 
 function chatPodeEnviarGlobal() {
     const role = api.getUsuarioLogado()?.role || "";
@@ -1351,10 +1355,6 @@ window.chatEnviar = async function() {
 // Usa /manutencoes/{id}/respostas — conversa individual por chamado
 // Todos os perfis podem visualizar e enviar mensagens
 // ═══════════════════════════════════════════════════════════════════════════════
-let _eqChatTimer   = null;
-let _eqChatId      = null;   // ID da manutenção atual
-let _eqChatAnexos  = [];
-
 function eqChatIniciar(manutencaoId) {
     _eqChatId     = manutencaoId;
     _eqChatAnexos = [];
