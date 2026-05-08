@@ -239,6 +239,21 @@
         .modal-chat-col { width:100%; max-height:260px; border-top:1px solid #e5e7eb; }
         .chat-widget { width:calc(100vw - 32px); right:16px; }
     }
+        /* ─── Histórico: badge de usuário ──────────────────────────── */
+    .historico-usuario {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: .78rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .historico-usuario::before { content: "👤 "; font-style: normal; }
     </style>
 </head>
 <body>

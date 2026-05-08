@@ -643,6 +643,7 @@ window.verHistorico = async function(id) {
         const linhaAtual = `<tr style="background:#f0fdf4">
             <td style="font-size:.82rem;color:#6b7280">${formatDateTime(m.data_fim || m.data_inicio)}</td>
             <td><span class="edit-log-motivo-badge atual">Estado atual</span></td>
+            <td><span class="historico-usuario">${m.criado_por || "-"}</span></td>
             <td>${m.tecnico || "-"}</td>
             <td><span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></td>
             <td class="problema-cell">${(m.problema || "-").substring(0,50)}</td>
@@ -654,6 +655,7 @@ window.verHistorico = async function(id) {
             return `<tr>
                 <td style="font-size:.82rem;color:#6b7280">${formatDateTime(e.ts)}</td>
                 <td><span class="edit-log-motivo-badge">${e.motivo || "Edição"}</span></td>
+                <td><span class="historico-usuario">${e.editado_por || "-"}</span></td>
                 <td>${s.tecnico || "-"}</td>
                 <td><span class="badge ${getStatusBadge(s.status)}">${s.status || "-"}</span></td>
                 <td class="problema-cell">${(s.problema || "-").substring(0,50)}</td>
@@ -674,7 +676,7 @@ window.verHistorico = async function(id) {
             </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Data/Hora</th><th>Evento</th><th>Técnico</th><th>Status</th><th>Problema</th><th>Custo</th></tr></thead>
+                    <thead><tr><th>Data/Hora</th><th>Evento</th><th>Alterado por</th><th>Técnico</th><th>Status</th><th>Problema</th><th>Custo</th></tr></thead>
                     <tbody>${linhaAtual}${linhasLog}</tbody>
                 </table>
             </div>
