@@ -141,7 +141,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 function openModal(id)  { document.getElementById(id).classList.add("active"); }
 function closeModal(id) {
     document.getElementById(id).classList.remove("active");
-    if (id === "modalDetalhes") {
+    if (id === "modalManutencao" || id === "modalManutencaoSimples") {
         eqChatParar();
         const inputEl = document.getElementById("modal-chat-input-area");
         if (inputEl) { inputEl.innerHTML = ""; delete inputEl.dataset.mounted; }
@@ -351,6 +351,7 @@ window.editManutencao = async function(id) {
         populateDatalist();
         openModal("modalManutencao");
         nfRenderizar(String(m.id));
+        eqChatIniciar(m.id);
     } catch (err) { showError(err.message); }
 };
 
@@ -372,6 +373,7 @@ async function editManutencaoSimples(id) {
         _simplesManutId = m.id;
         nfRenderizarSimples(m.id);
         openModal("modalManutencaoSimples");
+        eqChatIniciar(m.id);
     } catch (err) { showError(err.message); }
 }
 
@@ -517,7 +519,6 @@ window.verDetalhes = async function(id) {
         detCarregarRespostas(id, userRole);
 
         openModal("modalDetalhes");
-        eqChatIniciar(id);
     } catch (err) { showError(err.message); }
 };
 
@@ -777,7 +778,6 @@ window.verHistorico = async function(id) {
             <div style="display:none"><!-- fim -->
             </div>`;
         openModal("modalDetalhes");
-        eqChatIniciar(m.id);
     } catch (err) { showError(err.message); }
 };
 

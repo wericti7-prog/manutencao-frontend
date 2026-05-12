@@ -55,6 +55,8 @@
     }
     #modalDetalhes { align-items:center; justify-content:center; }
     #modalDetalhes.active { display:flex !important; }
+    #modalManutencao { align-items:center; justify-content:center; }
+    #modalManutencao.active { display:flex !important; }
 
     /* ─── Chat global flutuante ──────────────────────────────── */
     .chat-fab {
@@ -536,12 +538,14 @@
 
     <!-- ===== MODAL — Nova / Editar Manutenção ===== -->
     <div id="modalManutencao" class="modal">
-        <div class="modal-content">
+        <div class="modal-detalhes-layout">
+            <!-- Coluna esquerda: formulário -->
+            <div class="modal-detalhes-col">
             <div class="modal-header">
                 <h3 id="modalManutencaoTitle">Nova Manutenção</h3>
                 <span class="close" data-modal="modalManutencao">&times;</span>
             </div>
-            <form id="formManutencao">
+            <form id="formManutencao" style="overflow-y:auto;flex:1;">
                 <input type="hidden" id="manutencaoId">
 
                 <div class="form-row">
@@ -673,25 +677,9 @@
                     <button type="submit" class="btn btn-primary">💾 Salvar</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <!-- ===== MODAL — Detalhes + Chat do Equipamento ===== -->
-    <div id="modalDetalhes" class="modal">
-        <div class="modal-detalhes-layout">
-            <!-- Coluna esquerda: detalhes -->
-            <div class="modal-detalhes-col">
-                <div class="modal-header">
-                    <h3 id="modalDetalhesTitle">Detalhes da Manutenção</h3>
-                    <span class="close" data-modal="modalDetalhes">&times;</span>
-                </div>
-                <div id="modalDetalhesContent" style="padding:25px;overflow-y:auto;flex:1;"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-modal="modalDetalhes">Fechar</button>
-                </div>
-            </div>
+            </div><!-- /modal-detalhes-col -->
             <!-- Coluna direita: chat do equipamento -->
-            <div class="modal-chat-col" id="modalChatCol">
+            <div class="modal-chat-col" id="modalEditChatCol">
                 <div class="modal-chat-header">
                     <span style="font-size:1.1rem">🔧</span>
                     <div>
@@ -706,6 +694,20 @@
                     </div>
                 </div>
                 <div id="modal-chat-input-area"></div>
+            </div>
+        </div><!-- /modal-detalhes-layout -->
+    </div>
+
+    <!-- ===== MODAL — Detalhes / Histórico ===== -->
+    <div id="modalDetalhes" class="modal">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h3 id="modalDetalhesTitle">Detalhes da Manutenção</h3>
+                <span class="close" data-modal="modalDetalhes">&times;</span>
+            </div>
+            <div id="modalDetalhesContent" style="padding:25px;overflow-y:auto;max-height:75vh;"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal="modalDetalhes">Fechar</button>
             </div>
         </div>
     </div>
