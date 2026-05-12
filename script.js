@@ -7,6 +7,7 @@ let _chatNaoLidas     = 0;
 let _chatAnexos       = [];
 let _chatPollingTimer = null;
 let _chatAberto       = false;
+let _simplesManutId   = null;
 let _eqChatTimer      = null;
 let _eqChatId         = null;
 let _eqChatAnexos     = [];
@@ -50,9 +51,9 @@ function mostrarApp() {
     const menuRelatorios = document.querySelector(".tab-btn[data-tab='relatorios']");
     if (menuRelatorios) menuRelatorios.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
 
-    // Botão Nova Manutenção: oculto para observador
+    // Botão Nova Manutenção: oculto para observador e manutencao
     const btnNova = document.getElementById("btnNovaManutencao");
-    if (btnNova) btnNova.style.display = u.role === "observador" ? "none" : "inline-flex";
+    if (btnNova) btnNova.style.display = ["observador","manutencao"].includes(u.role) ? "none" : "inline-flex";
 
     updateStats();
     loadManutencoes();
@@ -212,7 +213,7 @@ async function loadManutencoes() {
             // manutencao: histórico + editar (sem excluir, sem criar)
             // tecnico/gerencia/admin: tudo
             const podeEditar  = !["observador"].includes(userRole);
-            const podeExcluir = ["tecnico","gerencia","admin"].includes(userRole);
+            const podeExcluir = ["gerencia","admin"].includes(userRole);
             const acoes = `
                 <button class="btn-icon btn-history" onclick="verDetalhes(${m.id})" title="Ver detalhes">📋</button>
                 ${podeEditar  ? `<button class="btn-icon btn-edit"   onclick="editManutencao(${m.id})" title="Editar">✏️</button>` : ""}
@@ -327,7 +328,9 @@ document.getElementById("btnResultadoSemReparo").addEventListener("click", () =>
 
 window.editManutencao = async function(id) {
     const userRole = api.getUsuarioLogado()?.role || "";
-    if (userRole === "observador") return; // observador não edita
+    if (userRole === "observador") return;
+    // Perfil manutencao usa modal simplificado
+    if (userRole === "manutencao") { await editManutencaoSimples(id); return; }
     try {
         const [m, anexos] = await Promise.all([api.getManutencao(id), api.listarAnexos(id).catch(() => [])]);
         document.getElementById("manutencaoId").value          = m.id;
@@ -343,23 +346,109 @@ window.editManutencao = async function(id) {
         document.getElementById("manutencaoCusto").value       = m.custo     || 0;
         document.getElementById("manutencaoPecas").value       = m.pecas     || "";
         document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${m.numero}`;
-
-        // Perfil "manutencao": bloqueia campos que ele não pode alterar
-        const bloqueados = ["manutencaoEquipamento","manutencaoTipo",
-                            "manutencaoDataInicio","manutencaoDataFim","manutencaoTecnico"];
-        bloqueados.forEach(fid => {
-            const el = document.getElementById(fid);
-            if (el) el.disabled = (userRole === "manutencao");
-        });
-
-        // Perfil "manutencao" não pode finalizar nem excluir
-        document.getElementById("btnFinalizar").style.display =
-            userRole === "manutencao" ? "none" : "inline-flex";
+        document.getElementById("btnFinalizar").style.display = "inline-flex";
         document.getElementById("tecnicoAutoTag").style.display = "none";
         populateDatalist();
         openModal("modalManutencao");
-        // Carrega anexos deste atendimento
         nfRenderizar(String(m.id));
+    } catch (err) { showError(err.message); }
+};
+
+// ─── Modal simplificado para perfil "manutencao" ───────────────────────────────
+async function editManutencaoSimples(id) {
+    try {
+        const m = await api.getManutencao(id);
+        const modal = document.getElementById("modalManutencaoSimples");
+        modal.querySelector("#simplesId").value       = m.id;
+        modal.querySelector("#simplesNumero").value   = m.numero;
+        modal.querySelector("#simplesStatus").value   = m.status || "";
+        modal.querySelector("#simplesProblema").value = m.problema || "";
+        modal.querySelector("#simplesSolucao").value  = m.solucao || "";
+        modal.querySelector("#simplesCusto").value    = m.custo || 0;
+        modal.querySelector("#simplesPecas").value    = m.pecas || "";
+        modal.querySelector("#simplesTitle").textContent = `Editar #${m.numero} — ${m.equipamento}`;
+        // Guardar id para upload de anexos
+        document.getElementById("simplesAnexoBtn")?.setAttribute("data-id", m.id);
+        _simplesManutId = m.id;
+        nfRenderizarSimples(m.id);
+        openModal("modalManutencaoSimples");
+    } catch (err) { showError(err.message); }
+}
+
+async function nfRenderizarSimples(manutencaoId) {
+    const container = document.getElementById("simples-anexos-container");
+    if (!container) return;
+    try {
+        const lista = await api.listarAnexos(manutencaoId);
+        if (!lista.length) {
+            container.innerHTML = `<p style="font-size:.85rem;color:#6b7280">Nenhum anexo. Clique em "Anexar arquivo" para adicionar.</p>`;
+        } else {
+            container.innerHTML = lista.map((a, i) => `
+                <div class="nf-item">
+                    <span class="nf-icone">${nfIcone(a.tipo)}</span>
+                    <div class="nf-info">
+                        <span class="nf-nome">${a.nome}</span>
+                        <span class="nf-meta">${nfFormatarTamanho(a.tamanho)} · ${a.data}</span>
+                    </div>
+                    <div class="nf-acoes">
+                        <button type="button" class="btn-nf btn-nf-ver" onclick="nfDownload('${encodeURIComponent(a.base64)}','${encodeURIComponent(a.nome)}')" title="Baixar">⬇️</button>
+                        <button type="button" class="btn-nf btn-nf-del" onclick="nfExcluirSimples(${manutencaoId},${a.id})" title="Excluir">🗑️</button>
+                    </div>
+                </div>`).join("");
+        }
+    } catch { container.innerHTML = `<p style="font-size:.85rem;color:#ef4444">Erro ao carregar anexos.</p>`; }
+}
+
+function nfDownload(b64enc, nomeEnc) {
+    const a = document.createElement("a");
+    a.href = decodeURIComponent(b64enc);
+    a.download = decodeURIComponent(nomeEnc);
+    a.click();
+}
+
+window.nfExcluirSimples = async function(manutencaoId, anexoId) {
+    if (!confirm("Excluir este anexo?")) return;
+    try {
+        await api.removerAnexo(manutencaoId, anexoId);
+        nfRenderizarSimples(manutencaoId);
+    } catch (err) { showError(err.message); }
+};
+
+window.simplesAnexarArquivo = async function() {
+    if (!_simplesManutId) return;
+    const input = document.createElement("input");
+    input.type = "file"; input.multiple = true;
+    input.onchange = async () => {
+        const MAX = 5 * 1024 * 1024;
+        for (const file of input.files) {
+            if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); continue; }
+            const base64 = await new Promise(res => {
+                const r = new FileReader();
+                r.onload = e => res(e.target.result);
+                r.readAsDataURL(file);
+            });
+            await api.adicionarAnexo(_simplesManutId, {
+                nome: file.name, tipo: file.type,
+                tamanho: file.size, data: new Date().toLocaleDateString("pt-BR"), base64
+            });
+        }
+        nfRenderizarSimples(_simplesManutId);
+    };
+    input.click();
+};
+
+window.salvarManutencaoSimples = async function() {
+    const id      = document.getElementById("simplesId").value;
+    const status  = document.getElementById("simplesStatus").value;
+    const problema= document.getElementById("simplesProblema").value.trim();
+    const solucao = document.getElementById("simplesSolucao").value.trim();
+    const custo   = parseFloat(document.getElementById("simplesCusto").value) || 0;
+    const pecas   = document.getElementById("simplesPecas").value.trim();
+    if (!problema) { alert("Descrição do problema é obrigatória."); return; }
+    try {
+        await api.editarManutencao(id, { status, problema, solucao, custo, pecas });
+        closeModal("modalManutencaoSimples");
+        loadManutencoes(); updateStats();
     } catch (err) { showError(err.message); }
 };
 
