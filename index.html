@@ -57,6 +57,8 @@
     #modalDetalhes.active { display:flex !important; }
     #modalManutencao { align-items:center; justify-content:center; }
     #modalManutencao.active { display:flex !important; }
+    #modalManutencaoSimples { align-items:center; justify-content:center; }
+    #modalManutencaoSimples.active { display:flex !important; }
 
     /* ─── Chat global flutuante ──────────────────────────────── */
     .chat-fab {
@@ -792,59 +794,79 @@
 
     <!-- ===== MODAL — Edição Simplificada (perfil manutencao) ===== -->
     <div id="modalManutencaoSimples" class="modal">
-        <div class="modal-content" style="max-width:560px">
-            <div class="modal-header">
-                <h3 id="simplesTitle">Editar Manutenção</h3>
-                <span class="close" data-modal="modalManutencaoSimples">&times;</span>
-            </div>
-            <div style="padding:24px;display:flex;flex-direction:column;gap:16px;">
-                <input type="hidden" id="simplesId">
-                <input type="hidden" id="simplesNumero">
-
-                <div class="form-group">
-                    <label for="simplesStatus">Status *</label>
-                    <select id="simplesStatus" class="form-control" required>
-                        <option value="Aguardando aprovação">Aguardando aprovação</option>
-                        <option value="Em Manutenção">Em Manutenção</option>
-                        <option value="Aguardando Peças">Aguardando Peças</option>
-                        <option value="Concluída">Concluída</option>
-                        <option value="Cancelada">Cancelada</option>
-                    </select>
+        <div class="modal-detalhes-layout">
+            <!-- Coluna esquerda: formulário -->
+            <div class="modal-detalhes-col">
+                <div class="modal-header">
+                    <h3 id="simplesTitle">Editar Manutenção</h3>
+                    <span class="close" data-modal="modalManutencaoSimples">&times;</span>
                 </div>
+                <div style="padding:24px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;flex:1;">
+                    <input type="hidden" id="simplesId">
+                    <input type="hidden" id="simplesNumero">
 
-                <div class="form-group">
-                    <label for="simplesProblema">Descrição do Problema *</label>
-                    <textarea id="simplesProblema" class="form-control" rows="3" placeholder="Descreva o problema..." required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="simplesSolucao">Solução Aplicada</label>
-                    <textarea id="simplesSolucao" class="form-control" rows="3" placeholder="Descreva a solução aplicada..."></textarea>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
                     <div class="form-group">
-                        <label for="simplesCusto">Custo (R$)</label>
-                        <input type="number" id="simplesCusto" class="form-control" min="0" step="0.01" value="0">
+                        <label for="simplesStatus">Status *</label>
+                        <select id="simplesStatus" class="form-control" required>
+                            <option value="Aguardando aprovação">Aguardando aprovação</option>
+                            <option value="Em Manutenção">Em Manutenção</option>
+                            <option value="Aguardando Peças">Aguardando Peças</option>
+                            <option value="Concluída">Concluída</option>
+                            <option value="Cancelada">Cancelada</option>
+                        </select>
                     </div>
+
                     <div class="form-group">
-                        <label for="simplesPecas">Peças Utilizadas</label>
-                        <input type="text" id="simplesPecas" class="form-control" placeholder="Ex: Teclado, Cabo HDMI">
+                        <label for="simplesProblema">Descrição do Problema *</label>
+                        <textarea id="simplesProblema" class="form-control" rows="3" placeholder="Descreva o problema..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="simplesSolucao">Solução Aplicada</label>
+                        <textarea id="simplesSolucao" class="form-control" rows="3" placeholder="Descreva a solução aplicada..."></textarea>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group">
+                            <label for="simplesCusto">Custo (R$)</label>
+                            <input type="number" id="simplesCusto" class="form-control" min="0" step="0.01" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="simplesPecas">Peças Utilizadas</label>
+                            <input type="text" id="simplesPecas" class="form-control" placeholder="Ex: Teclado, Cabo HDMI">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Anexos</label>
+                        <div id="simples-anexos-container" style="margin-bottom:8px"></div>
+                        <button type="button" class="btn btn-secondary" id="simplesAnexoBtn"
+                            onclick="window.simplesAnexarArquivo()" style="font-size:.85rem;padding:6px 14px">
+                            📎 Anexar arquivo
+                        </button>
                     </div>
                 </div>
-
-                <div class="form-group">
-                    <label>Anexos</label>
-                    <div id="simples-anexos-container" style="margin-bottom:8px"></div>
-                    <button type="button" class="btn btn-secondary" id="simplesAnexoBtn"
-                        onclick="window.simplesAnexarArquivo()" style="font-size:.85rem;padding:6px 14px">
-                        📎 Anexar arquivo
-                    </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-modal="modalManutencaoSimples">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="window.salvarManutencaoSimples()">💾 Salvar</button>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-modal="modalManutencaoSimples">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="window.salvarManutencaoSimples()">💾 Salvar</button>
+            <!-- Coluna direita: chat do equipamento -->
+            <div class="modal-chat-col" id="modalSimplesChatCol">
+                <div class="modal-chat-header">
+                    <span style="font-size:1.1rem">🔧</span>
+                    <div>
+                        <div style="font-weight:700;font-size:.95rem">Chat do Equipamento</div>
+                        <div style="font-size:.75rem;opacity:.7">Conversa individual deste chamado</div>
+                    </div>
+                </div>
+                <div class="modal-chat-lista" id="modal-chat-lista-simples">
+                    <div class="chat-vazio" id="modal-chat-vazio-simples">
+                        <div style="font-size:2rem;margin-bottom:8px">💬</div>
+                        <p>Nenhuma mensagem ainda.</p>
+                    </div>
+                </div>
+                <div id="modal-chat-input-area-simples"></div>
             </div>
         </div>
     </div>

@@ -11,6 +11,8 @@ let _simplesManutId   = null;
 let _eqChatTimer      = null;
 let _eqChatId         = null;
 let _eqChatAnexos     = [];
+let _eqChatListaId    = "modal-chat-lista";
+let _eqChatInputId    = "modal-chat-input-area";
 
 // ─── Utilitários ───────────────────────────────────────────────────────────────
 const formatDate     = d => d ? new Date(d).toLocaleDateString("pt-BR") : "-";
@@ -143,8 +145,10 @@ function closeModal(id) {
     document.getElementById(id).classList.remove("active");
     if (id === "modalManutencao" || id === "modalManutencaoSimples") {
         eqChatParar();
-        const inputEl = document.getElementById("modal-chat-input-area");
-        if (inputEl) { inputEl.innerHTML = ""; delete inputEl.dataset.mounted; }
+        ["modal-chat-input-area", "modal-chat-input-area-simples"].forEach(eid => {
+            const el = document.getElementById(eid);
+            if (el) { el.innerHTML = ""; delete el.dataset.mounted; }
+        });
     }
 }
 
@@ -373,7 +377,7 @@ async function editManutencaoSimples(id) {
         _simplesManutId = m.id;
         nfRenderizarSimples(m.id);
         openModal("modalManutencaoSimples");
-        eqChatIniciar(m.id);
+        eqChatIniciar(m.id, true);
     } catch (err) { showError(err.message); }
 }
 
@@ -1446,19 +1450,20 @@ window.chatEnviar = async function() {
 // Usa /manutencoes/{id}/respostas — conversa individual por chamado
 // Todos os perfis podem visualizar e enviar mensagens
 // ═══════════════════════════════════════════════════════════════════════════════
-function eqChatIniciar(manutencaoId) {
-    _eqChatId     = manutencaoId;
-    _eqChatAnexos = [];
+function eqChatIniciar(manutencaoId, simples = false) {
+    _eqChatId      = manutencaoId;
+    _eqChatAnexos  = [];
+    _eqChatListaId = simples ? "modal-chat-lista-simples"    : "modal-chat-lista";
+    _eqChatInputId = simples ? "modal-chat-input-area-simples" : "modal-chat-input-area";
     // Limpa lista e mostra vazio
-    const lista = document.getElementById("modal-chat-lista");
+    const lista = document.getElementById(_eqChatListaId);
     if (lista) lista.innerHTML = `
-        <div class="chat-vazio" id="modal-chat-vazio">
+        <div class="chat-vazio" id="modal-chat-vazio-${simples ? "simples" : "normal"}">
             <div style="font-size:2rem;margin-bottom:8px">💬</div>
             <p>Nenhuma mensagem ainda.</p>
         </div>`;
     _eqChatMontarInput();
-    _eqChatCarregarTodas();   // carrega histório completo primeiro
-    // Polling para novas mensagens
+    _eqChatCarregarTodas();
     if (_eqChatTimer) clearInterval(_eqChatTimer);
     _eqChatTimer = setInterval(_eqChatCarregarTodas, 5000);
 }
@@ -1473,7 +1478,7 @@ async function _eqChatCarregarTodas() {
     if (!_eqChatId || !api.isLogado()) return;
     try {
         const respostas = await api.listarRespostas(_eqChatId);
-        const lista = document.getElementById("modal-chat-lista");
+        const lista = document.getElementById(_eqChatListaId);
         if (!lista) return;
         // Re-renderiza tudo para garantir consistência
         lista.innerHTML = "";
@@ -1492,12 +1497,12 @@ async function _eqChatCarregarTodas() {
                 r.anexos_resposta || [], minha, "eq"
             ));
         });
-        _chatScrollBottom("modal-chat-lista");
+        _chatScrollBottom(_eqChatListaId);
     } catch {}
 }
 
 function _eqChatMontarInput() {
-    const el = document.getElementById("modal-chat-input-area");
+    const el = document.getElementById(_eqChatInputId);
     if (!el) return;
     el.innerHTML = "";
     delete el.dataset.mounted;
@@ -1556,7 +1561,7 @@ window.eqChatEnviar = async function() {
     const textarea = document.getElementById("eq-chat-textarea");
     const texto = textarea?.value?.trim() || "";
     if (!texto && !_eqChatAnexos.length) return;
-    const btn = document.querySelector("#modal-chat-input-area .chat-btn-enviar");
+    const btn = document.querySelector(`#${_eqChatInputId} .chat-btn-enviar`);
     if (btn) btn.disabled = true;
     try {
         await api.criarResposta(_eqChatId, { texto, anexos: _eqChatAnexos });
