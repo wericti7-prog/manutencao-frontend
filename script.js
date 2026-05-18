@@ -262,6 +262,7 @@ document.getElementById("btnNovaManutencao").addEventListener("click", () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById("manutencaoDataInicio").value = now.toISOString().slice(0,16);
+    document.getElementById("manutencaoSubstituto").value = "";
     populateDatalist();
     openModal("modalManutencao");
     // Nova manutenção: limpa área de anexos
@@ -285,6 +286,7 @@ async function salvarManutencao(finalizar, resultadoReparo) {
         solucao:     document.getElementById("manutencaoSolucao").value,
         custo:       parseFloat(document.getElementById("manutencaoCusto").value) || 0,
         pecas:       document.getElementById("manutencaoPecas").value,
+        substituto:  document.getElementById("manutencaoSubstituto").value.trim() || null,
         data_inicio: document.getElementById("manutencaoDataInicio").value || null,
         data_fim:    document.getElementById("manutencaoDataFim").value    || null,
     };
@@ -349,6 +351,7 @@ window.editManutencao = async function(id) {
         document.getElementById("manutencaoSolucao").value     = m.solucao   || "";
         document.getElementById("manutencaoCusto").value       = m.custo     || 0;
         document.getElementById("manutencaoPecas").value       = m.pecas     || "";
+        document.getElementById("manutencaoSubstituto").value  = m.substituto || "";
         document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${m.numero}`;
         document.getElementById("btnFinalizar").style.display = "inline-flex";
         document.getElementById("tecnicoAutoTag").style.display = "none";
@@ -371,6 +374,7 @@ async function editManutencaoSimples(id) {
         modal.querySelector("#simplesSolucao").value  = m.solucao || "";
         modal.querySelector("#simplesCusto").value    = m.custo || 0;
         modal.querySelector("#simplesPecas").value    = m.pecas || "";
+        modal.querySelector("#simplesSubstituto").value = m.substituto || "";
         modal.querySelector("#simplesTitle").textContent = `Editar #${m.numero} — ${m.equipamento}`;
         // Guardar id para upload de anexos
         document.getElementById("simplesAnexoBtn")?.setAttribute("data-id", m.id);
@@ -450,9 +454,10 @@ window.salvarManutencaoSimples = async function() {
     const solucao = document.getElementById("simplesSolucao").value.trim();
     const custo   = parseFloat(document.getElementById("simplesCusto").value) || 0;
     const pecas   = document.getElementById("simplesPecas").value.trim();
+    const substituto = document.getElementById("simplesSubstituto").value.trim() || null;
     if (!problema) { alert("Descrição do problema é obrigatória."); return; }
     try {
-        await api.editarManutencao(id, { status, problema, solucao, custo, pecas });
+        await api.editarManutencao(id, { status, problema, solucao, custo, pecas, substituto });
         closeModal("modalManutencaoSimples");
         loadManutencoes(); updateStats();
     } catch (err) { showError(err.message); }
@@ -500,6 +505,7 @@ window.verDetalhes = async function(id) {
                     ${reparoHtml}
                     <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
                     ${m.pecas ? `<div><strong>Peças:</strong> ${m.pecas}</div>` : ""}
+                    ${m.substituto ? `<div style="grid-column:1/-1"><strong>🔄 Substituto enviado:</strong> <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-weight:600">${m.substituto}</span></div>` : ""}
                 </div></div>
                 <div style="margin-top:16px"><p><strong>Problema:</strong></p>
                     <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
