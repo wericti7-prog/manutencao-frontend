@@ -223,7 +223,7 @@ async function loadManutencoes() {
                 ${podeEditar  ? `<button class="btn-icon btn-edit"   onclick="editManutencao(${m.id})" title="Editar">✏️</button>` : ""}
                 ${podeExcluir ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}`;
             const badgeSubstituto = m.substituto
-                ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄 Substituto enviado</span>`
+                ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄</span>`
                 : "";
             return `<tr>
                 <td><span class="id-badge">${m.numero}</span></td>
@@ -825,7 +825,7 @@ async function loadFinalizados() {
             const u = api.getUsuarioLogado();
             const isGerencia = u && ["gerencia","admin"].includes(u.role);
             const badgeSub = m.substituto
-                ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄 Substituto enviado</span>`
+                ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄</span>`
                 : "";
             return `<tr>
                 <td><span class="id-badge">${m.numero}</span></td>
