@@ -222,7 +222,7 @@ async function loadManutencoes() {
                 <button class="btn-icon btn-history" onclick="verDetalhes(${m.id})" title="Ver detalhes">📋</button>
                 ${podeEditar  ? `<button class="btn-icon btn-edit"   onclick="editManutencao(${m.id})" title="Editar">✏️</button>` : ""}
                 ${podeExcluir ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}`;
-            const badgeSubstituto = m.substituto
+            const badgeSubstituto = m.substituto && !["manutencao","observador"].includes(userRole)
                 ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄</span>`
                 : "";
             return `<tr>
@@ -291,7 +291,6 @@ async function salvarManutencao(finalizar, resultadoReparo) {
         solucao:     document.getElementById("manutencaoSolucao").value,
         custo:       parseFloat(document.getElementById("manutencaoCusto").value) || 0,
         pecas:       document.getElementById("manutencaoPecas").value,
-        substituto:  document.getElementById("manutencaoSubstituto")?.value.trim() || null,
         data_inicio: document.getElementById("manutencaoDataInicio").value || null,
         data_fim:    document.getElementById("manutencaoDataFim").value    || null,
     };
@@ -356,7 +355,6 @@ window.editManutencao = async function(id) {
         document.getElementById("manutencaoSolucao").value     = m.solucao   || "";
         document.getElementById("manutencaoCusto").value       = m.custo     || 0;
         document.getElementById("manutencaoPecas").value       = m.pecas     || "";
-        document.getElementById("manutencaoSubstituto").value  = m.substituto || "";
         document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${m.numero}`;
         document.getElementById("btnFinalizar").style.display = "inline-flex";
         document.getElementById("tecnicoAutoTag").style.display = "none";
@@ -378,8 +376,7 @@ async function editManutencaoSimples(id) {
         modal.querySelector("#simplesProblema").value = m.problema || "";
         modal.querySelector("#simplesSolucao").value  = m.solucao || "";
         modal.querySelector("#simplesCusto").value    = m.custo || 0;
-        modal.querySelector("#simplesPecas").value       = m.pecas || "";
-        modal.querySelector("#simplesSubstituto").value  = m.substituto || "";
+        modal.querySelector("#simplesPecas").value    = m.pecas || "";
         modal.querySelector("#simplesTitle").textContent = `Editar #${m.numero} — ${m.equipamento}`;
         // Guardar id para upload de anexos
         document.getElementById("simplesAnexoBtn")?.setAttribute("data-id", m.id);
@@ -458,11 +455,10 @@ window.salvarManutencaoSimples = async function() {
     const problema= document.getElementById("simplesProblema").value.trim();
     const solucao = document.getElementById("simplesSolucao").value.trim();
     const custo   = parseFloat(document.getElementById("simplesCusto").value) || 0;
-    const pecas      = document.getElementById("simplesPecas").value.trim();
-    const substituto = document.getElementById("simplesSubstituto")?.value.trim() || null;
+    const pecas   = document.getElementById("simplesPecas").value.trim();
     if (!problema) { alert("Descrição do problema é obrigatória."); return; }
     try {
-        await api.editarManutencao(id, { status, problema, solucao, custo, pecas, substituto });
+        await api.editarManutencao(id, { status, problema, solucao, custo, pecas });
         closeModal("modalManutencaoSimples");
         loadManutencoes(); updateStats();
     } catch (err) { showError(err.message); }
@@ -828,7 +824,7 @@ async function loadFinalizados() {
         const rows = lista.map(m => {
             const u = api.getUsuarioLogado();
             const isGerencia = u && ["gerencia","admin"].includes(u.role);
-            const badgeSub = m.substituto
+            const badgeSub = m.substituto && !["manutencao","observador"].includes(u?.role)
                 ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄</span>`
                 : "";
             return `<tr>
