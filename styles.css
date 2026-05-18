@@ -567,6 +567,24 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
     text-decoration-color: var(--primary-dark);
 }
 
+/* ---- Badge substituto enviado ---- */
+.badge-substituto {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: .72rem;
+    font-weight: 600;
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    white-space: nowrap;
+    cursor: default;
+    letter-spacing: .01em;
+}
+
 /* ---- Badges de resultado do reparo ---- */
 .badge-consertado { background-color: #d1fae5; color: #065f46; }
 .badge-sem-reparo { background-color: #fee2e2; color: #991b1b; }
