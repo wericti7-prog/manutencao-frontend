@@ -338,7 +338,7 @@ document.getElementById("btnResultadoSemReparo").addEventListener("click", () =>
 
 window.editManutencao = async function(id) {
     const userRole = api.getUsuarioLogado()?.role || "";
-    if (userRole === "observador") return;
+    if (userRole === "observador") { await verDetalhes(id); return; }
     // Perfil manutencao usa modal simplificado
     if (userRole === "manutencao") { await editManutencaoSimples(id); return; }
     try {
@@ -548,12 +548,11 @@ async function detCarregarRespostas(id, userRole) {
 
     try {
         const respostas = await api.listarRespostas(id);
-        const respostasVisiveis = respostas.filter(r => r.role === "observador");
 
         // Renderiza thread de respostas no painel de detalhes
         if (listaEl) {
-            if (respostasVisiveis.length) {
-                const itens = respostasVisiveis.map(r => {
+            if (respostas.length) {
+                const itens = respostas.map(r => {
                     const isManut   = r.role === "manutencao";
                     const cor       = isManut ? "#eff6ff" : "#f0fdf4";
                     const borda     = isManut ? "#3b82f6" : "#22c55e";
@@ -583,7 +582,7 @@ async function detCarregarRespostas(id, userRole) {
                             ${anexosHtml}
                         </div>`;
                 }).join("");
-                listaEl.innerHTML = `<p><strong>💬 Mensagens (${respostasVisiveis.length})</strong></p>${itens}`;
+                listaEl.innerHTML = `<p><strong>💬 Mensagens (${respostas.length})</strong></p>${itens}`;
             }
         }
 
