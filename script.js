@@ -291,7 +291,6 @@ async function salvarManutencao(finalizar, resultadoReparo) {
         solucao:     document.getElementById("manutencaoSolucao").value,
         custo:       parseFloat(document.getElementById("manutencaoCusto").value) || 0,
         pecas:       document.getElementById("manutencaoPecas").value,
-        substituto:  document.getElementById("manutencaoSubstituto")?.value.trim() || null,
         data_inicio: document.getElementById("manutencaoDataInicio").value || null,
         data_fim:    document.getElementById("manutencaoDataFim").value    || null,
     };
@@ -356,12 +355,6 @@ window.editManutencao = async function(id) {
         document.getElementById("manutencaoSolucao").value     = m.solucao   || "";
         document.getElementById("manutencaoCusto").value       = m.custo     || 0;
         document.getElementById("manutencaoPecas").value       = m.pecas     || "";
-        const _subEl = document.getElementById("manutencaoSubstituto");
-        if (_subEl) {
-            _subEl.value = m.substituto || "";
-            const _grp = _subEl.closest(".form-group");
-            if (_grp) _grp.style.display = ["manutencao","observador"].includes(userRole) ? "none" : "";
-        }
         document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${m.numero}`;
         document.getElementById("btnFinalizar").style.display = "inline-flex";
         document.getElementById("tecnicoAutoTag").style.display = "none";
@@ -384,12 +377,6 @@ async function editManutencaoSimples(id) {
         modal.querySelector("#simplesSolucao").value  = m.solucao || "";
         modal.querySelector("#simplesCusto").value    = m.custo || 0;
         modal.querySelector("#simplesPecas").value    = m.pecas || "";
-        const _subSimples = modal.querySelector("#simplesSubstituto");
-        if (_subSimples) {
-            _subSimples.value = m.substituto || "";
-            const _grpS = _subSimples.closest(".form-group");
-            if (_grpS) _grpS.style.display = "none";
-        }
         modal.querySelector("#simplesTitle").textContent = `Editar #${m.numero} — ${m.equipamento}`;
         // Guardar id para upload de anexos
         document.getElementById("simplesAnexoBtn")?.setAttribute("data-id", m.id);
@@ -468,11 +455,10 @@ window.salvarManutencaoSimples = async function() {
     const problema= document.getElementById("simplesProblema").value.trim();
     const solucao = document.getElementById("simplesSolucao").value.trim();
     const custo   = parseFloat(document.getElementById("simplesCusto").value) || 0;
-    const pecas      = document.getElementById("simplesPecas").value.trim();
-    const substituto = document.getElementById("simplesSubstituto")?.value.trim() || null;
+    const pecas   = document.getElementById("simplesPecas").value.trim();
     if (!problema) { alert("Descrição do problema é obrigatória."); return; }
     try {
-        await api.editarManutencao(id, { status, problema, solucao, custo, pecas, substituto });
+        await api.editarManutencao(id, { status, problema, solucao, custo, pecas });
         closeModal("modalManutencaoSimples");
         loadManutencoes(); updateStats();
     } catch (err) { showError(err.message); }
@@ -562,11 +548,12 @@ async function detCarregarRespostas(id, userRole) {
 
     try {
         const respostas = await api.listarRespostas(id);
+        const respostasVisiveis = respostas.filter(r => r.role === "observador");
 
         // Renderiza thread de respostas no painel de detalhes
         if (listaEl) {
-            if (respostas.length) {
-                const itens = respostas.map(r => {
+            if (respostasVisiveis.length) {
+                const itens = respostasVisiveis.map(r => {
                     const isManut   = r.role === "manutencao";
                     const cor       = isManut ? "#eff6ff" : "#f0fdf4";
                     const borda     = isManut ? "#3b82f6" : "#22c55e";
@@ -596,7 +583,7 @@ async function detCarregarRespostas(id, userRole) {
                             ${anexosHtml}
                         </div>`;
                 }).join("");
-                listaEl.innerHTML = `<p><strong>💬 Mensagens (${respostas.length})</strong></p>${itens}`;
+                listaEl.innerHTML = `<p><strong>💬 Mensagens (${respostasVisiveis.length})</strong></p>${itens}`;
             }
         }
 
