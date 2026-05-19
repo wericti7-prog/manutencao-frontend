@@ -338,7 +338,7 @@ document.getElementById("btnResultadoSemReparo").addEventListener("click", () =>
 
 window.editManutencao = async function(id) {
     const userRole = api.getUsuarioLogado()?.role || "";
-    if (userRole === "observador") { await verDetalhes(id); return; }
+    if (userRole === "observador") return;
     // Perfil manutencao usa modal simplificado
     if (userRole === "manutencao") { await editManutencaoSimples(id); return; }
     try {
@@ -529,6 +529,18 @@ window.verDetalhes = async function(id) {
         detCarregarRespostas(id, userRole);
 
         openModal("modalDetalhes");
+
+        // Observador abre direto na aba de chat
+        if (userRole === "observador") {
+            setTimeout(() => {
+                document.querySelectorAll(".det-tab-btn").forEach(b => b.classList.remove("active"));
+                document.querySelectorAll(".det-panel").forEach(p => p.style.display = "none");
+                const panelResp = document.getElementById(`det-panel-responder`);
+                if (panelResp) panelResp.style.display = "block";
+                document.querySelectorAll(".det-tab-btn")
+                    .forEach(b => { if (b.textContent.includes("Responder")) b.classList.add("active"); });
+            }, 50);
+        }
     } catch (err) { showError(err.message); }
 };
 
