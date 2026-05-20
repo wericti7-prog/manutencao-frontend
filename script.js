@@ -804,7 +804,7 @@ async function loadFinalizados() {
         const todas = await api.listarManutencoes(params);
         // Filtra localmente só as finalizadas
         let lista = todas.filter(m => m.status === "Concluída" || m.status === "Cancelada");
-        lista.sort((a, b) => new Date(a.data_fim || a.data_inicio) - new Date(b.data_fim || b.data_inicio));
+        lista.sort((a, b) => new Date(b.data_fim || b.data_inicio) - new Date(a.data_fim || a.data_inicio));
 
         // Filtro local por número do chamado, equipamento, técnico ou problema
         if (search) {
