@@ -291,6 +291,7 @@ async function salvarManutencao(finalizar, resultadoReparo) {
         solucao:     document.getElementById("manutencaoSolucao").value,
         custo:       parseFloat(document.getElementById("manutencaoCusto").value) || 0,
         pecas:       document.getElementById("manutencaoPecas").value,
+        substituto:  document.getElementById("manutencaoSubstituto")?.value.trim() || null,
         data_inicio: document.getElementById("manutencaoDataInicio").value || null,
         data_fim:    document.getElementById("manutencaoDataFim").value    || null,
     };
@@ -355,6 +356,12 @@ window.editManutencao = async function(id) {
         document.getElementById("manutencaoSolucao").value     = m.solucao   || "";
         document.getElementById("manutencaoCusto").value       = m.custo     || 0;
         document.getElementById("manutencaoPecas").value       = m.pecas     || "";
+        const _subEl = document.getElementById("manutencaoSubstituto");
+        if (_subEl) {
+            _subEl.value = m.substituto || "";
+            const _grp = _subEl.closest(".form-group");
+            if (_grp) _grp.style.display = ["manutencao","observador"].includes(userRole) ? "none" : "";
+        }
         document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${m.numero}`;
         document.getElementById("btnFinalizar").style.display = "inline-flex";
         document.getElementById("tecnicoAutoTag").style.display = "none";
@@ -377,6 +384,12 @@ async function editManutencaoSimples(id) {
         modal.querySelector("#simplesSolucao").value  = m.solucao || "";
         modal.querySelector("#simplesCusto").value    = m.custo || 0;
         modal.querySelector("#simplesPecas").value    = m.pecas || "";
+        const _subSimples = modal.querySelector("#simplesSubstituto");
+        if (_subSimples) {
+            _subSimples.value = m.substituto || "";
+            const _grpS = _subSimples.closest(".form-group");
+            if (_grpS) _grpS.style.display = "none";
+        }
         modal.querySelector("#simplesTitle").textContent = `Editar #${m.numero} — ${m.equipamento}`;
         // Guardar id para upload de anexos
         document.getElementById("simplesAnexoBtn")?.setAttribute("data-id", m.id);
@@ -455,10 +468,11 @@ window.salvarManutencaoSimples = async function() {
     const problema= document.getElementById("simplesProblema").value.trim();
     const solucao = document.getElementById("simplesSolucao").value.trim();
     const custo   = parseFloat(document.getElementById("simplesCusto").value) || 0;
-    const pecas   = document.getElementById("simplesPecas").value.trim();
+    const pecas      = document.getElementById("simplesPecas").value.trim();
+    const substituto = document.getElementById("simplesSubstituto")?.value.trim() || null;
     if (!problema) { alert("Descrição do problema é obrigatória."); return; }
     try {
-        await api.editarManutencao(id, { status, problema, solucao, custo, pecas });
+        await api.editarManutencao(id, { status, problema, solucao, custo, pecas, substituto });
         closeModal("modalManutencaoSimples");
         loadManutencoes(); updateStats();
     } catch (err) { showError(err.message); }
@@ -481,52 +495,42 @@ window.verDetalhes = async function(id) {
         const reparoHtml = m.resultado_reparo
             ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span></div>` : "";
 
-        document.getElementById("modalDetalhesTitle").textContent = `Atendimento #${m.numero}`;
-
-        // ─── Aba RESPONDER (Observador e Manutenção) ───────────────────────────
-        const podeUsarResposta = ["observador", "manutencao"].includes(userRole);
-
-        const tabsHtml = podeUsarResposta ? `
-            <div class="det-tabs">
-                <button class="det-tab-btn active" onclick="detSwitchTab('detalhes','${id}')">📄 Detalhes</button>
-                <button class="det-tab-btn" onclick="detSwitchTab('responder','${id}')">💬 Responder</button>
-            </div>` : "";
-
-        document.getElementById("modalDetalhesContent").innerHTML = `
-            ${tabsHtml}
-            <div id="det-panel-detalhes" class="det-panel active">
-                <div class="historico-info"><div class="historico-info-grid">
-                    <div><strong>Nº:</strong> <span class="id-badge">${m.numero}</span></div>
-                    <div><strong>Equipamento:</strong> ${m.equipamento}</div>
-                    <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
-                    <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
-                    <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
-                    <div><strong>Conclusão:</strong> ${formatDateTime(m.data_fim)}</div>
-                    <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
-                    ${reparoHtml}
-                    <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
-                    ${m.pecas ? `<div><strong>Peças:</strong> ${m.pecas}</div>` : ""}
-                </div></div>
-                <div style="margin-top:16px"><p><strong>Problema:</strong></p>
-                    <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
-                </div>
-                <div style="margin-top:12px"><p><strong>Solução:</strong></p>
-                    <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
-                </div>
-                <div style="margin-top:16px;text-align:right">
-                    <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verHistorico(${m.id})">📋 Ver histórico de edições</button>
-                </div>
-                ${nfHtmlSomenteLeitura(anexos, String(m.id))}
-                <div id="det-respostas-lista-${id}" style="margin-top:20px"></div>
+        const detalhesHtml = `
+            <div class="historico-info"><div class="historico-info-grid">
+                <div><strong>Nº:</strong> <span class="id-badge">${m.numero}</span></div>
+                <div><strong>Equipamento:</strong> ${m.equipamento}</div>
+                <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
+                <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
+                <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
+                <div><strong>Conclusão:</strong> ${formatDateTime(m.data_fim)}</div>
+                <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
+                ${reparoHtml}
+                <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
+                ${m.pecas ? `<div><strong>Peças:</strong> ${m.pecas}</div>` : ""}
+            </div></div>
+            <div style="margin-top:16px"><p><strong>Problema:</strong></p>
+                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
             </div>
-            <div id="det-panel-responder" class="det-panel" style="display:none">
-                <div id="det-responder-content-${id}">
-                    <p style="color:var(--text-secondary);font-size:.9rem">Carregando...</p>
-                </div>
-            </div>`;
+            <div style="margin-top:12px"><p><strong>Solução:</strong></p>
+                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
+            </div>
+            <div style="margin-top:16px;text-align:right">
+                <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verHistorico(${m.id})">📋 Ver histórico de edições</button>
+            </div>
+            ${nfHtmlSomenteLeitura(anexos, String(m.id))}`;
 
-        // Todos os perfis veem respostas; podeUsarResposta controla o formulário
-        detCarregarRespostas(id, userRole);
+        if (userRole === "observador") {
+            document.getElementById("modalDetalhesLayoutSimples").style.display = "none";
+            document.getElementById("modalDetalhesLayoutChat").style.display    = "flex";
+            document.getElementById("modalDetalhesTitleChat").textContent       = `Atendimento #${m.numero}`;
+            document.getElementById("modalDetalhesContentChat").innerHTML       = detalhesHtml;
+            eqChatIniciar(m.id, false, "detalhes");
+        } else {
+            document.getElementById("modalDetalhesLayoutSimples").style.display = "";
+            document.getElementById("modalDetalhesLayoutChat").style.display    = "none";
+            document.getElementById("modalDetalhesTitle").textContent           = `Atendimento #${m.numero}`;
+            document.getElementById("modalDetalhesContent").innerHTML           = detalhesHtml;
+        }
 
         openModal("modalDetalhes");
     } catch (err) { showError(err.message); }
@@ -804,6 +808,7 @@ async function loadFinalizados() {
         const todas = await api.listarManutencoes(params);
         // Filtra localmente só as finalizadas
         let lista = todas.filter(m => m.status === "Concluída" || m.status === "Cancelada");
+        lista.sort((a, b) => new Date(b.data_fim || b.data_inicio) - new Date(a.data_fim || a.data_inicio));
 
         // Filtro local por número do chamado, equipamento, técnico ou problema
         if (search) {
@@ -1566,11 +1571,16 @@ window.chatEnviar = async function() {
 // Usa /manutencoes/{id}/respostas — conversa individual por chamado
 // Todos os perfis podem visualizar e enviar mensagens
 // ═══════════════════════════════════════════════════════════════════════════════
-function eqChatIniciar(manutencaoId, simples = false) {
+function eqChatIniciar(manutencaoId, simples = false, modo = "normal") {
     _eqChatId      = manutencaoId;
     _eqChatAnexos  = [];
-    _eqChatListaId = simples ? "modal-chat-lista-simples"    : "modal-chat-lista";
-    _eqChatInputId = simples ? "modal-chat-input-area-simples" : "modal-chat-input-area";
+    if (modo === "detalhes") {
+        _eqChatListaId = "modal-chat-lista-detalhes";
+        _eqChatInputId = "modal-chat-input-area-detalhes";
+    } else {
+        _eqChatListaId = simples ? "modal-chat-lista-simples"     : "modal-chat-lista";
+        _eqChatInputId = simples ? "modal-chat-input-area-simples" : "modal-chat-input-area";
+    }
     // Limpa lista e mostra vazio
     const lista = document.getElementById(_eqChatListaId);
     if (lista) lista.innerHTML = `
