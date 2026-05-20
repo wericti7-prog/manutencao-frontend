@@ -481,66 +481,44 @@ window.verDetalhes = async function(id) {
         const reparoHtml = m.resultado_reparo
             ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span></div>` : "";
 
-        document.getElementById("modalDetalhesTitle").textContent = `Atendimento #${m.numero}`;
-
-        // ─── Aba RESPONDER (Observador e Manutenção) ───────────────────────────
-        const podeUsarResposta = ["observador", "manutencao"].includes(userRole);
-
-        const tabsHtml = podeUsarResposta ? `
-            <div class="det-tabs">
-                <button class="det-tab-btn active" onclick="detSwitchTab('detalhes','${id}')">📄 Detalhes</button>
-                <button class="det-tab-btn" onclick="detSwitchTab('responder','${id}')">💬 Responder</button>
-            </div>` : "";
-
-        document.getElementById("modalDetalhesContent").innerHTML = `
-            ${tabsHtml}
-            <div id="det-panel-detalhes" class="det-panel active">
-                <div class="historico-info"><div class="historico-info-grid">
-                    <div><strong>Nº:</strong> <span class="id-badge">${m.numero}</span></div>
-                    <div><strong>Equipamento:</strong> ${m.equipamento}</div>
-                    <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
-                    <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
-                    <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
-                    <div><strong>Conclusão:</strong> ${formatDateTime(m.data_fim)}</div>
-                    <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
-                    ${reparoHtml}
-                    <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
-                    ${m.pecas ? `<div><strong>Peças:</strong> ${m.pecas}</div>` : ""}
-                </div></div>
-                <div style="margin-top:16px"><p><strong>Problema:</strong></p>
-                    <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
-                </div>
-                <div style="margin-top:12px"><p><strong>Solução:</strong></p>
-                    <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
-                </div>
-                <div style="margin-top:16px;text-align:right">
-                    <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verHistorico(${m.id})">📋 Ver histórico de edições</button>
-                </div>
-                ${nfHtmlSomenteLeitura(anexos, String(m.id))}
-                <div id="det-respostas-lista-${id}" style="margin-top:20px"></div>
+        const detalhesHtml = `
+            <div class="historico-info"><div class="historico-info-grid">
+                <div><strong>Nº:</strong> <span class="id-badge">${m.numero}</span></div>
+                <div><strong>Equipamento:</strong> ${m.equipamento}</div>
+                <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
+                <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
+                <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
+                <div><strong>Conclusão:</strong> ${formatDateTime(m.data_fim)}</div>
+                <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
+                ${reparoHtml}
+                <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
+                ${m.pecas ? `<div><strong>Peças:</strong> ${m.pecas}</div>` : ""}
+            </div></div>
+            <div style="margin-top:16px"><p><strong>Problema:</strong></p>
+                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
             </div>
-            <div id="det-panel-responder" class="det-panel" style="display:none">
-                <div id="det-responder-content-${id}">
-                    <p style="color:var(--text-secondary);font-size:.9rem">Carregando...</p>
-                </div>
-            </div>`;
+            <div style="margin-top:12px"><p><strong>Solução:</strong></p>
+                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
+            </div>
+            <div style="margin-top:16px;text-align:right">
+                <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="verHistorico(${m.id})">📋 Ver histórico de edições</button>
+            </div>
+            ${nfHtmlSomenteLeitura(anexos, String(m.id))}`;
 
-        // Todos os perfis veem respostas; podeUsarResposta controla o formulário
-        detCarregarRespostas(id, userRole);
+        if (userRole === "observador") {
+            document.getElementById("modalDetalhesLayoutSimples").style.display = "none";
+            document.getElementById("modalDetalhesLayoutChat").style.display    = "flex";
+            document.getElementById("modalDetalhesTitleChat").textContent       = `Atendimento #${m.numero}`;
+            document.getElementById("modalDetalhesContentChat").innerHTML       = detalhesHtml;
+            eqChatIniciar(m.id, false, "detalhes");
+        } else {
+            document.getElementById("modalDetalhesLayoutSimples").style.display = "";
+            document.getElementById("modalDetalhesLayoutChat").style.display    = "none";
+            document.getElementById("modalDetalhesTitle").textContent           = `Atendimento #${m.numero}`;
+            document.getElementById("modalDetalhesContent").innerHTML           = detalhesHtml;
+        }
 
         openModal("modalDetalhes");
-
-        // Observador abre direto na aba de chat
-        if (userRole === "observador") {
-            setTimeout(() => {
-                document.querySelectorAll(".det-tab-btn").forEach(b => b.classList.remove("active"));
-                document.querySelectorAll(".det-panel").forEach(p => p.style.display = "none");
-                const panelResp = document.getElementById(`det-panel-responder`);
-                if (panelResp) panelResp.style.display = "block";
-                document.querySelectorAll(".det-tab-btn")
-                    .forEach(b => { if (b.textContent.includes("Responder")) b.classList.add("active"); });
-            }, 50);
-        }
     } catch (err) { showError(err.message); }
 };
 
@@ -1474,15 +1452,20 @@ window.chatEnviar = async function() {
 // Usa /manutencoes/{id}/respostas — conversa individual por chamado
 // Todos os perfis podem visualizar e enviar mensagens
 // ═══════════════════════════════════════════════════════════════════════════════
-function eqChatIniciar(manutencaoId, simples = false) {
+function eqChatIniciar(manutencaoId, simples = false, modo = "normal") {
     _eqChatId      = manutencaoId;
     _eqChatAnexos  = [];
-    _eqChatListaId = simples ? "modal-chat-lista-simples"    : "modal-chat-lista";
-    _eqChatInputId = simples ? "modal-chat-input-area-simples" : "modal-chat-input-area";
+    if (modo === "detalhes") {
+        _eqChatListaId = "modal-chat-lista-detalhes";
+        _eqChatInputId = "modal-chat-input-area-detalhes";
+    } else {
+        _eqChatListaId = simples ? "modal-chat-lista-simples"     : "modal-chat-lista";
+        _eqChatInputId = simples ? "modal-chat-input-area-simples" : "modal-chat-input-area";
+    }
     // Limpa lista e mostra vazio
     const lista = document.getElementById(_eqChatListaId);
     if (lista) lista.innerHTML = `
-        <div class="chat-vazio" id="modal-chat-vazio-${simples ? "simples" : "normal"}">
+        <div class="chat-vazio">
             <div style="font-size:2rem;margin-bottom:8px">💬</div>
             <p>Nenhuma mensagem ainda.</p>
         </div>`;
