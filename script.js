@@ -804,7 +804,6 @@ async function loadFinalizados() {
         const todas = await api.listarManutencoes(params);
         // Filtra localmente só as finalizadas
         let lista = todas.filter(m => m.status === "Concluída" || m.status === "Cancelada");
-        lista.sort((a, b) => new Date(b.data_fim || b.data_inicio) - new Date(a.data_fim || a.data_inicio));
 
         // Filtro local por número do chamado, equipamento, técnico ou problema
         if (search) {
@@ -895,7 +894,111 @@ async function loadEstatisticasPeriodo() {
 document.getElementById("formRelatorio").addEventListener("submit", async e => {
     e.preventDefault();
     await loadEstatisticasPeriodo();
+    await gerarRelatorio();
 });
+
+async function gerarRelatorio() {
+    const tipo  = document.getElementById("tipoRelatorio").value;
+    const ini   = document.getElementById("dataInicio").value;
+    const fim   = document.getElementById("dataFim").value;
+    const el    = document.getElementById("resultadoRelatorio");
+    const title = document.getElementById("resultadoRelatorioTitulo");
+
+    try {
+        const todas = await api.listarManutencoes();
+        const filtrada = todas.filter(m => {
+            if (!m.data_inicio) return false;
+            const d = new Date(m.data_inicio);
+            return d >= new Date(ini) && d <= new Date(fim + "T23:59:59");
+        });
+
+        if (tipo === "manutencoes") {
+            title.textContent = "Histórico de Manutenções";
+            if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; return; }
+            const rows = filtrada.map(m => `
+                <tr>
+                    <td><span class="id-badge">${m.numero}</span></td>
+                    <td>${m.equipamento}</td>
+                    <td>${m.localizacao || "-"}</td>
+                    <td>${m.tecnico || "-"}</td>
+                    <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+                    <td>${formatDate(m.data_inicio)}</td>
+                    <td>${formatDate(m.data_fim)}</td>
+                    <td>${formatCurrency(m.custo)}</td>
+                </tr>`).join("");
+            el.innerHTML = `<table>
+                <thead><tr><th>Nº</th><th>Equipamento</th><th>Loja</th><th>Técnico</th><th>Status</th><th>Início</th><th>Conclusão</th><th>Custo</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+
+        } else if (tipo === "custos") {
+            title.textContent = "Análise de Custos";
+            if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; return; }
+            const porTecnico = {};
+            filtrada.forEach(m => {
+                const t = m.tecnico || "Sem técnico";
+                if (!porTecnico[t]) porTecnico[t] = { qtd: 0, custo: 0 };
+                porTecnico[t].qtd++;
+                porTecnico[t].custo += m.custo || 0;
+            });
+            const rows = Object.entries(porTecnico)
+                .sort((a, b) => b[1].custo - a[1].custo)
+                .map(([tec, d]) => `
+                <tr>
+                    <td>${tec}</td>
+                    <td>${d.qtd}</td>
+                    <td>${formatCurrency(d.custo)}</td>
+                    <td>${formatCurrency(d.qtd ? d.custo / d.qtd : 0)}</td>
+                </tr>`).join("");
+            el.innerHTML = `<table>
+                <thead><tr><th>Técnico</th><th>Atendimentos</th><th>Custo Total</th><th>Custo Médio</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+
+        } else if (tipo === "lojas") {
+            title.textContent = "Ranking de Lojas — Manutenções e Gastos";
+            if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; return; }
+            const porLoja = {};
+            filtrada.forEach(m => {
+                const loja = m.localizacao || "Sem loja";
+                if (!porLoja[loja]) porLoja[loja] = { total: 0, concluidas: 0, abertas: 0, custo: 0 };
+                porLoja[loja].total++;
+                porLoja[loja].custo += m.custo || 0;
+                if (m.status === "Concluída" || m.status === "Cancelada") porLoja[loja].concluidas++;
+                else porLoja[loja].abertas++;
+            });
+            const ranking = Object.entries(porLoja).sort((a, b) => b[1].total - a[1].total);
+            const maxTotal = ranking[0]?.[1].total || 1;
+            const rows = ranking.map(([loja, d], i) => {
+                const pct = Math.round((d.total / maxTotal) * 100);
+                const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i+1}º`;
+                return `<tr>
+                    <td style="font-weight:700;font-size:1.1rem">${medalha}</td>
+                    <td style="font-weight:600">${loja}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px">
+                                <div style="width:${pct}%;background:var(--primary-color);border-radius:4px;height:8px"></div>
+                            </div>
+                            <span style="font-weight:700;min-width:24px">${d.total}</span>
+                        </div>
+                    </td>
+                    <td><span style="color:#16a34a;font-weight:600">${d.concluidas}</span> / <span style="color:#dc2626">${d.abertas}</span></td>
+                    <td style="font-weight:700">${formatCurrency(d.custo)}</td>
+                    <td>${formatCurrency(d.total ? d.custo / d.total : 0)}</td>
+                </tr>`;
+            }).join("");
+            el.innerHTML = `
+                <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:12px">
+                    Ordenado por maior número de equipamentos enviados para manutenção. Concluídas / Em aberto.
+                </p>
+                <table>
+                    <thead><tr><th>#</th><th>Loja</th><th>Equipamentos</th><th>Concluídas / Abertas</th><th>Gasto Total</th><th>Gasto Médio</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+        }
+    } catch (err) { showError(err.message); }
+}
 
 // ─── ABA USUÁRIOS (gerência) ──────────────────────────────────────────────────
 async function loadUsuarios() {
