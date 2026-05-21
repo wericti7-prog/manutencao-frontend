@@ -1315,7 +1315,7 @@ async function loadLixeira() {
                 <td>${m.equipamento}</td>
                 <td>${m.localizacao || "—"}</td>
                 <td>${m.tecnico || "—"}</td>
-                <td><span class="badge ${statusBadge(m.status)}">${m.status}</span></td>
+                <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
                 <td style="font-size:.85rem;color:var(--text-secondary)">${deletadoEm}</td>
                 <td style="font-size:.85rem;color:var(--text-secondary)">${m.deletado_por || "—"}</td>
                 <td>
