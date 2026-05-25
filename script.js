@@ -379,14 +379,7 @@ async function editManutencaoSimples(id) {
         const modal = document.getElementById("modalManutencaoSimples");
         modal.querySelector("#simplesId").value       = m.id;
         modal.querySelector("#simplesNumero").value   = m.numero;
-        // Garante que o status atual da manutenção esteja disponível no select
-        const simplesStatusEl = modal.querySelector("#simplesStatus");
-        if (m.status && !Array.from(simplesStatusEl.options).some(o => o.value === m.status)) {
-            const opt = document.createElement("option");
-            opt.value = m.status; opt.textContent = m.status;
-            simplesStatusEl.appendChild(opt);
-        }
-        simplesStatusEl.value = m.status || "";
+        modal.querySelector("#simplesStatus").value   = m.status || "Aguardando aprovação";
         modal.querySelector("#simplesProblema").value = m.problema || "";
         modal.querySelector("#simplesSolucao").value  = m.solucao || "";
         modal.querySelector("#simplesCusto").value    = m.custo || 0;
