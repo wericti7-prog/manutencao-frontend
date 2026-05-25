@@ -471,7 +471,6 @@ window.salvarManutencaoSimples = async function() {
     const pecas      = document.getElementById("simplesPecas").value.trim();
     const substituto = document.getElementById("simplesSubstituto")?.value.trim() || null;
     if (!problema) { alert("Descrição do problema é obrigatória."); return; }
-    if (["Concluída", "Cancelada"].includes(status)) { alert("Não é permitido definir o status como Concluída ou Cancelada por este perfil."); return; }
     try {
         await api.editarManutencao(id, { status, problema, solucao, custo, pecas, substituto });
         closeModal("modalManutencaoSimples");
@@ -796,14 +795,8 @@ window.verHistorico = async function(id) {
     } catch (err) { showError(err.message); }
 };
 
-// ─── ABA FINALIZADOS (com paginação) ─────────────────────────────────────────
-const FINALIZADOS_POR_PAGINA = 30;
-let _finalizadosPaginaAtual = 1;
-let _finalizadosListaCache  = [];
-
-async function loadFinalizados(pagina = 1) {
-    _finalizadosPaginaAtual = pagina;
-
+// ─── ABA FINALIZADOS ──────────────────────────────────────────────────────────
+async function loadFinalizados() {
     const search = document.getElementById("searchFinalizado")?.value || "";
     const tipo   = document.getElementById("filterTipoFinalizado")?.value || "";
 
@@ -813,9 +806,11 @@ async function loadFinalizados(pagina = 1) {
         if (tipo) params.localizacao = tipo;
 
         const todas = await api.listarManutencoes(params);
+        // Filtra localmente só as finalizadas
         let lista = todas.filter(m => m.status === "Concluída" || m.status === "Cancelada");
         lista.sort((a, b) => new Date(b.data_fim || b.data_inicio) - new Date(a.data_fim || a.data_inicio));
 
+        // Filtro local por número do chamado, equipamento, técnico ou problema
         if (search) {
             const s = search.toLowerCase();
             lista = lista.filter(m =>
@@ -825,118 +820,53 @@ async function loadFinalizados(pagina = 1) {
                 (m.problema    || "").toLowerCase().includes(s)
             );
         }
-
-        _finalizadosListaCache = lista;
-
         if (!lista.length) {
             document.getElementById("listaFinalizados").innerHTML =
                 '<div class="empty-state"><h3>Nenhuma manutenção finalizada</h3></div>';
             return;
         }
-
-        _renderFinalizados();
+        const custoTotal = lista.reduce((s, m) => s + (m.custo || 0), 0);
+        const rows = lista.map(m => {
+            const u = api.getUsuarioLogado();
+            const isGerencia = u && ["gerencia","admin"].includes(u.role);
+            const badgeSub = m.substituto && !["manutencao","observador"].includes(u?.role)
+                ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄</span>`
+                : "";
+            return `<tr>
+                <td><span class="id-badge">${m.numero}</span></td>
+                <td>
+                    <button class="link-equipamento" onclick="verDetalhes(${m.id})">${m.equipamento}</button>
+                    ${badgeSub}
+                </td>
+                <td>${m.localizacao || "-"}</td>
+                <td>${m.tecnico || "-"}</td>
+                <td>${formatDateTime(m.data_inicio)}</td>
+                <td>${formatDateTime(m.data_fim)}</td>
+                <td>${m.resultado_reparo ? `<span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span>` : "—"}</td>
+                <td>${formatCurrency(m.custo)}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-history" onclick="verDetalhes(${m.id})" title="Ver detalhes">📋</button>
+                        ${isGerencia ? `<button class="btn-icon btn-edit" onclick="abrirModalReabrir(${m.id})" title="Reabrir chamado">↩️</button>` : ""}
+                        ${isGerencia ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}
+                    </div>
+                </td>
+            </tr>`;
+        }).join("");
+        document.getElementById("listaFinalizados").innerHTML = `
+            <table>
+                <thead><tr><th>Nº</th><th>Equipamento</th><th>Localização</th><th>Técnico</th>
+                    <th>Início</th><th>Conclusão</th><th>Reparo</th><th>Custo</th><th>Ações</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+                <tfoot><tr>
+                    <td colspan="7" style="text-align:right;font-weight:600;padding:12px 15px">Custo Total:</td>
+                    <td style="font-weight:700;color:var(--primary-color);padding:12px 15px">${formatCurrency(custoTotal)}</td>
+                    <td></td>
+                </tr></tfoot>
+            </table>`;
     } catch (err) { showError(err.message); }
 }
-
-function _renderFinalizados() {
-    const lista      = _finalizadosListaCache;
-    const total      = lista.length;
-    const totalPags  = Math.ceil(total / FINALIZADOS_POR_PAGINA);
-    const pag        = Math.min(_finalizadosPaginaAtual, totalPags);
-    const inicio     = (pag - 1) * FINALIZADOS_POR_PAGINA;
-    const paginados  = lista.slice(inicio, inicio + FINALIZADOS_POR_PAGINA);
-
-    const custoTotal = lista.reduce((s, m) => s + (m.custo || 0), 0);
-    const u          = api.getUsuarioLogado();
-    const isGerencia = u && ["gerencia","admin"].includes(u.role);
-
-    const rows = paginados.map(m => {
-        const badgeSub = m.substituto && !["manutencao","observador"].includes(u?.role)
-            ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄</span>`
-            : "";
-        return `<tr>
-            <td><span class="id-badge">${m.numero}</span></td>
-            <td>
-                <button class="link-equipamento" onclick="verDetalhes(${m.id})">${m.equipamento}</button>
-                ${badgeSub}
-            </td>
-            <td>${m.localizacao || "-"}</td>
-            <td>${m.tecnico || "-"}</td>
-            <td>${formatDateTime(m.data_inicio)}</td>
-            <td>${formatDateTime(m.data_fim)}</td>
-            <td>${m.resultado_reparo ? `<span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span>` : "—"}</td>
-            <td>${formatCurrency(m.custo)}</td>
-            <td>
-                <div class="action-buttons">
-                    <button class="btn-icon btn-history" onclick="verDetalhes(${m.id})" title="Ver detalhes">📋</button>
-                    ${isGerencia ? `<button class="btn-icon btn-edit" onclick="abrirModalReabrir(${m.id})" title="Reabrir chamado">↩️</button>` : ""}
-                    ${isGerencia ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}
-                </div>
-            </td>
-        </tr>`;
-    }).join("");
-
-    // ── Paginação ──────────────────────────────────────────────────────────────
-    let paginacaoHtml = "";
-    if (totalPags > 1) {
-        const btnPrev = pag > 1
-            ? `<button class="pag-btn" onclick="window._irPaginaFinalizado(${pag - 1})">‹ Anterior</button>`
-            : `<button class="pag-btn" disabled>‹ Anterior</button>`;
-        const btnNext = pag < totalPags
-            ? `<button class="pag-btn" onclick="window._irPaginaFinalizado(${pag + 1})">Próxima ›</button>`
-            : `<button class="pag-btn" disabled>Próxima ›</button>`;
-
-        // Números de página (máx 7 visíveis com reticências)
-        let numeros = "";
-        for (let i = 1; i <= totalPags; i++) {
-            if (
-                i === 1 || i === totalPags ||
-                (i >= pag - 2 && i <= pag + 2)
-            ) {
-                numeros += `<button class="pag-btn pag-num ${i === pag ? "pag-ativa" : ""}"
-                    onclick="window._irPaginaFinalizado(${i})">${i}</button>`;
-            } else if (i === pag - 3 || i === pag + 3) {
-                numeros += `<span class="pag-reticencias">…</span>`;
-            }
-        }
-
-        paginacaoHtml = `
-            <div class="pag-container">
-                <span class="pag-info">
-                    Mostrando ${inicio + 1}–${Math.min(inicio + FINALIZADOS_POR_PAGINA, total)} de ${total} chamados
-                </span>
-                <div class="pag-controles">
-                    ${btnPrev}
-                    ${numeros}
-                    ${btnNext}
-                </div>
-            </div>`;
-    }
-
-    document.getElementById("listaFinalizados").innerHTML = `
-        ${paginacaoHtml}
-        <table>
-            <thead><tr><th>Nº</th><th>Equipamento</th><th>Localização</th><th>Técnico</th>
-                <th>Início</th><th>Conclusão</th><th>Reparo</th><th>Custo</th><th>Ações</th>
-            </tr></thead>
-            <tbody>${rows}</tbody>
-            <tfoot><tr>
-                <td colspan="7" style="text-align:right;font-weight:600;padding:12px 15px">
-                    Custo Total (todos os ${total} chamados):
-                </td>
-                <td style="font-weight:700;color:var(--primary-color);padding:12px 15px">${formatCurrency(custoTotal)}</td>
-                <td></td>
-            </tr></tfoot>
-        </table>
-        ${totalPags > 1 ? paginacaoHtml : ""}`;
-}
-
-window._irPaginaFinalizado = function(pag) {
-    _finalizadosPaginaAtual = pag;
-    _renderFinalizados();
-    // Scroll suave até o topo da lista
-    document.getElementById("listaFinalizados")?.scrollIntoView({ behavior: "smooth", block: "start" });
-};
 
 // ─── ABA RELATÓRIOS ───────────────────────────────────────────────────────────
 async function loadRelatorios() {
@@ -1346,8 +1276,8 @@ async function nfContagem(id) {
 document.getElementById("searchManutencao")?.addEventListener("input", loadManutencoes);
 document.getElementById("filterTipoManutencao")?.addEventListener("change", loadManutencoes);
 document.getElementById("filterStatusManutencao")?.addEventListener("change", loadManutencoes);
-document.getElementById("searchFinalizado")?.addEventListener("input", () => { _finalizadosPaginaAtual = 1; loadFinalizados(1); });
-document.getElementById("filterTipoFinalizado")?.addEventListener("change", () => { _finalizadosPaginaAtual = 1; loadFinalizados(1); });
+document.getElementById("searchFinalizado")?.addEventListener("input", loadFinalizados);
+document.getElementById("filterTipoFinalizado")?.addEventListener("change", loadFinalizados);
 
 // ─── REABRIR CHAMADO (gerência) ───────────────────────────────────────────────
 window.abrirModalReabrir = function(id) {
