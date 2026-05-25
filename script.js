@@ -379,7 +379,7 @@ async function editManutencaoSimples(id) {
         const modal = document.getElementById("modalManutencaoSimples");
         modal.querySelector("#simplesId").value       = m.id;
         modal.querySelector("#simplesNumero").value   = m.numero;
-        modal.querySelector("#simplesStatus").value   = m.status || "Aguardando aprovação";
+        modal.querySelector("#simplesStatus").value   = m.status || "";
         modal.querySelector("#simplesProblema").value = m.problema || "";
         modal.querySelector("#simplesSolucao").value  = m.solucao || "";
         modal.querySelector("#simplesCusto").value    = m.custo || 0;
@@ -471,6 +471,7 @@ window.salvarManutencaoSimples = async function() {
     const pecas      = document.getElementById("simplesPecas").value.trim();
     const substituto = document.getElementById("simplesSubstituto")?.value.trim() || null;
     if (!problema) { alert("Descrição do problema é obrigatória."); return; }
+    if (["Concluída", "Cancelada"].includes(status)) { alert("Não é permitido definir o status como Concluída ou Cancelada por este perfil."); return; }
     try {
         await api.editarManutencao(id, { status, problema, solucao, custo, pecas, substituto });
         closeModal("modalManutencaoSimples");
