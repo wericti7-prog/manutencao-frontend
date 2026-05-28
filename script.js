@@ -471,7 +471,6 @@ window.salvarManutencaoSimples = async function() {
     const pecas      = document.getElementById("simplesPecas").value.trim();
     const substituto = document.getElementById("simplesSubstituto")?.value.trim() || null;
     if (!problema) { alert("Descrição do problema é obrigatória."); return; }
-    if (["Concluída", "Cancelada"].includes(status)) { alert("Não é permitido definir o status como Concluída ou Cancelada por este perfil."); return; }
     try {
         await api.editarManutencao(id, { status, problema, solucao, custo, pecas, substituto });
         closeModal("modalManutencaoSimples");
@@ -1776,3 +1775,20 @@ window.eqChatEnviar = async function() {
 if (api.isLogado()) {
     mostrarApp();
 }
+
+// ─── Dark / Light Mode ────────────────────────────────────────────────────────
+(function() {
+    const btn = document.getElementById("btnTema");
+    const saved = localStorage.getItem("tema") || "light";
+    const apply = (t) => {
+        document.documentElement.setAttribute("data-theme", t);
+        btn.textContent = t === "dark" ? "☀️" : "🌙";
+        btn.title = t === "dark" ? "Modo claro" : "Modo escuro";
+    };
+    apply(saved);
+    btn.addEventListener("click", () => {
+        const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        localStorage.setItem("tema", next);
+        apply(next);
+    });
+})();
