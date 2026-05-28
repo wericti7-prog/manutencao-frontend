@@ -1420,7 +1420,7 @@ window.restaurarChamado = async function(id) {
 
 function chatPodeEnviarGlobal() {
     const role = api.getUsuarioLogado()?.role || "";
-    return ["observador", "manutencao"].includes(role);
+    return !!api.getUsuarioLogado()?.role;
 }
 
 function chatIniciar() {
@@ -1552,7 +1552,7 @@ function _chatMontarInputGlobal() {
     if (!el || el.dataset.mounted) return;
     el.dataset.mounted = "1";
     if (!chatPodeEnviarGlobal()) {
-        el.innerHTML = `<div class="chat-somente-leitura">👁️ Apenas Suprimentos e Manutenção podem enviar no chat geral.</div>`;
+        el.innerHTML = `<div class="chat-somente-leitura">👁️ Faça login para enviar mensagens.</div>`;
         return;
     }
     el.innerHTML = `
