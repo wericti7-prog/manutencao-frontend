@@ -1296,3 +1296,25 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
 [data-theme="dark"] .chat-anexo:hover {
     background: rgba(59,130,246,.22);
 }
+
+/* ── Botão toggle dark/light ── */
+#btnTema {
+    position: fixed;
+    top: 14px;
+    right: 18px;
+    z-index: 9999;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(128,128,128,.35);
+    background: rgba(100,100,100,.2);
+    backdrop-filter: blur(8px);
+    cursor: pointer !important;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    transition: background .2s, transform .15s;
+}
+#btnTema:hover { background: rgba(128,128,128,.35); transform: scale(1.12); }
