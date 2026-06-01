@@ -913,7 +913,6 @@ function _renderFinalizados() {
     }
 
     document.getElementById("listaFinalizados").innerHTML = `
-        ${paginacaoHtml}
         <table>
             <thead><tr><th>Nº</th><th>Equipamento</th><th>Localização</th><th>Técnico</th>
                 <th>Início</th><th>Conclusão</th><th>Reparo</th><th>Custo</th><th>Ações</th>
@@ -1420,7 +1419,7 @@ window.restaurarChamado = async function(id) {
 
 function chatPodeEnviarGlobal() {
     const role = api.getUsuarioLogado()?.role || "";
-    return !!api.getUsuarioLogado()?.role;
+    return ["observador", "manutencao"].includes(role);
 }
 
 function chatIniciar() {
@@ -1552,7 +1551,7 @@ function _chatMontarInputGlobal() {
     if (!el || el.dataset.mounted) return;
     el.dataset.mounted = "1";
     if (!chatPodeEnviarGlobal()) {
-        el.innerHTML = `<div class="chat-somente-leitura">👁️ Faça login para enviar mensagens.</div>`;
+        el.innerHTML = `<div class="chat-somente-leitura">👁️ Apenas Suprimentos e Manutenção podem enviar no chat geral.</div>`;
         return;
     }
     el.innerHTML = `
