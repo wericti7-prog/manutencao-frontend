@@ -1410,3 +1410,16 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
 [data-theme="dark"] .chat-textarea:focus { border-color: #3b82f6; background: #0f172a; }
 [data-theme="dark"] .chat-anexo { background: rgba(59,130,246,.12); border-color: #2d5080; }
 [data-theme="dark"] .chat-anexo:hover { background: rgba(59,130,246,.22); }
+
+/* ─── Ver Detalhes: blocos de Problema / Solução e grid de info ─────────────── */
+[data-theme="dark"] .historico-info { background: #162032; border-color: #334155; color: #f1f5f9; }
+[data-theme="dark"] .historico-info-grid > div { color: #94a3b8; }
+[data-theme="dark"] .historico-info-grid > div strong { color: #f1f5f9; }
+[data-theme="dark"] #modalDetalhesContent p[style*="background:#f9fafb"],
+[data-theme="dark"] #modalDetalhesContent p[style*="background: #f9fafb"],
+[data-theme="dark"] #modalDetalhesContentChat p[style*="background:#f9fafb"],
+[data-theme="dark"] #modalDetalhesContentChat p[style*="background: #f9fafb"] {
+    background: #0f172a !important;
+    color: #f1f5f9 !important;
+    border: 1px solid #334155;
+}
