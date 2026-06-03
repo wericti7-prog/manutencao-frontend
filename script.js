@@ -1418,8 +1418,7 @@ window.restaurarChamado = async function(id) {
 // (variáveis declaradas no topo do arquivo)
 
 function chatPodeEnviarGlobal() {
-    const role = api.getUsuarioLogado()?.role || "";
-    return ["observador", "manutencao"].includes(role);
+    return api.isLogado();
 }
 
 function chatIniciar() {
