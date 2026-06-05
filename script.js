@@ -949,8 +949,10 @@ async function loadEstatisticasPeriodo() {
         const ini = document.getElementById("dataInicio").value;
         const fim = document.getElementById("dataFim").value;
         const todas = await api.listarManutencoes();
+        // Para o ranking de lojas, incluímos registros sem data_inicio
+        // Para os demais relatórios mantemos o filtro de período
         const filtrada = todas.filter(m => {
-            if (!m.data_inicio) return false;
+            if (!m.data_inicio) return tipo === "lojas";
             const d = new Date(m.data_inicio);
             return d >= new Date(ini) && d <= new Date(fim + "T23:59:59");
         });
@@ -979,8 +981,10 @@ async function gerarRelatorio() {
 
     try {
         const todas = await api.listarManutencoes();
+        // Para o ranking de lojas, incluímos registros sem data_inicio
+        // Para os demais relatórios mantemos o filtro de período
         const filtrada = todas.filter(m => {
-            if (!m.data_inicio) return false;
+            if (!m.data_inicio) return tipo === "lojas";
             const d = new Date(m.data_inicio);
             return d >= new Date(ini) && d <= new Date(fim + "T23:59:59");
         });
@@ -1040,10 +1044,10 @@ async function gerarRelatorio() {
                 if (m.status === "Concluída" || m.status === "Cancelada") porLoja[loja].concluidas++;
                 else porLoja[loja].abertas++;
             });
-            const ranking = Object.entries(porLoja).sort((a, b) => b[1].total - a[1].total);
-            const maxTotal = ranking[0]?.[1].total || 1;
+            const ranking = Object.entries(porLoja).sort((a, b) => b[1].custo - a[1].custo);
+            const maxCusto = ranking[0]?.[1].custo || 1;
             const rows = ranking.map(([loja, d], i) => {
-                const pct = Math.round((d.total / maxTotal) * 100);
+                const pct = Math.round((d.custo / maxCusto) * 100);
                 const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i+1}º`;
                 return `<tr>
                     <td style="font-weight:700;font-size:1.1rem">${medalha}</td>
@@ -1063,10 +1067,10 @@ async function gerarRelatorio() {
             }).join("");
             el.innerHTML = `
                 <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:12px">
-                    Ordenado por maior número de equipamentos enviados para manutenção. Concluídas / Em aberto.
+                    Ordenado por maior gasto total. Concluídas / Em aberto.
                 </p>
                 <table>
-                    <thead><tr><th>#</th><th>Loja</th><th>Equipamentos</th><th>Concluídas / Abertas</th><th>Gasto Total</th><th>Gasto Médio</th></tr></thead>
+                    <thead><tr><th>#</th><th>Loja</th><th>Atendimentos</th><th>Concluídas / Abertas</th><th>Gasto Total</th><th>Gasto Médio</th></tr></thead>
                     <tbody>${rows}</tbody>
                 </table>`;
         }
