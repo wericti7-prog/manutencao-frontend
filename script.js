@@ -1046,9 +1046,12 @@ async function gerarRelatorio() {
             const rows = ranking.map(([loja, d], i) => {
                 const pct = Math.round((d.custo / maxCusto) * 100);
                 const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i+1}º`;
-                return `<tr>
+                const lojaEsc = loja.replace(/'/g, "\\'");
+                return `<tr class="ranking-loja-row" onclick="window.verManutencoesLoja('${lojaEsc}', ${JSON.stringify(todas).replace(/'/g, "\\'")})" title="Clique para ver as manutenções desta loja" style="cursor:pointer">
                     <td style="font-weight:700;font-size:1.1rem">${medalha}</td>
-                    <td style="font-weight:600">${loja}</td>
+                    <td style="font-weight:600">
+                        <span class="link-equipamento">${loja}</span>
+                    </td>
                     <td>
                         <div style="display:flex;align-items:center;gap:8px">
                             <div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px">
@@ -1065,6 +1068,7 @@ async function gerarRelatorio() {
             el.innerHTML = `
                 <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:12px">
                     Todas as lojas · Ordenado por maior gasto total. Concluídas / Em aberto.
+                    <span style="margin-left:8px;opacity:.7">💡 Clique em uma loja para ver suas manutenções.</span>
                 </p>
                 <table>
                     <thead><tr><th>#</th><th>Loja</th><th>Atendimentos</th><th>Concluídas / Abertas</th><th>Gasto Total</th><th>Gasto Médio</th></tr></thead>
@@ -1074,7 +1078,83 @@ async function gerarRelatorio() {
     } catch (err) { showError(err.message); }
 }
 
-// ─── ABA USUÁRIOS (gerência) ──────────────────────────────────────────────────
+// ─── Modal: Manutenções de uma Loja ──────────────────────────────────────────
+window.verManutencoesLoja = function(loja, todasManutencoes) {
+    const lista = todasManutencoes.filter(m => (m.localizacao || "Sem loja") === loja);
+    document.getElementById("modalManutencoesLojaTitle").textContent = `📍 ${loja} — ${lista.length} manutenção(ões)`;
+
+    if (!lista.length) {
+        document.getElementById("modalManutencoesLojaContent").innerHTML =
+            "<p style='text-align:center;color:var(--text-secondary);padding:32px'>Nenhuma manutenção encontrada.</p>";
+        openModal("modalManutencoesLoja");
+        return;
+    }
+
+    // Subtotais
+    const custoTotal = lista.reduce((s, m) => s + (m.custo || 0), 0);
+    const concluidas = lista.filter(m => m.status === "Concluída" || m.status === "Cancelada").length;
+    const abertas    = lista.length - concluidas;
+
+    const resumo = `
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px">
+            <div class="stat-item" style="flex:1;min-width:120px">
+                <span class="stat-item-value">${lista.length}</span>
+                <span class="stat-item-label">Total</span>
+            </div>
+            <div class="stat-item" style="flex:1;min-width:120px">
+                <span class="stat-item-value" style="color:#16a34a">${concluidas}</span>
+                <span class="stat-item-label">Concluídas</span>
+            </div>
+            <div class="stat-item" style="flex:1;min-width:120px">
+                <span class="stat-item-value" style="color:#dc2626">${abertas}</span>
+                <span class="stat-item-label">Em aberto</span>
+            </div>
+            <div class="stat-item" style="flex:1;min-width:120px">
+                <span class="stat-item-value">${formatCurrency(custoTotal)}</span>
+                <span class="stat-item-label">Gasto Total</span>
+            </div>
+        </div>`;
+
+    // Sort: abertas primeiro, depois por data decrescente
+    const ordenada = [...lista].sort((a, b) => {
+        const aFin = a.status === "Concluída" || a.status === "Cancelada";
+        const bFin = b.status === "Concluída" || b.status === "Cancelada";
+        if (aFin !== bFin) return aFin ? 1 : -1;
+        return new Date(b.data_inicio || 0) - new Date(a.data_inicio || 0);
+    });
+
+    const rows = ordenada.map(m => `
+        <tr style="cursor:pointer" onclick="verDetalhes(${m.id})" title="Ver detalhes">
+            <td><span class="id-badge">${m.numero}</span></td>
+            <td><span class="link-equipamento">${m.equipamento}</span></td>
+            <td>${m.tecnico || "-"}</td>
+            <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+            <td>${formatDate(m.data_inicio)}</td>
+            <td>${formatDate(m.data_fim)}</td>
+            <td style="font-weight:600">${formatCurrency(m.custo)}</td>
+        </tr>`).join("");
+
+    document.getElementById("modalManutencoesLojaContent").innerHTML = `
+        ${resumo}
+        <table>
+            <thead><tr>
+                <th>Nº</th><th>Equipamento</th><th>Técnico</th>
+                <th>Status</th><th>Início</th><th>Conclusão</th><th>Custo</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+            <tfoot><tr>
+                <td colspan="6" style="text-align:right;font-weight:600;padding:10px 15px">Total:</td>
+                <td style="font-weight:700;color:var(--primary-color);padding:10px 15px">${formatCurrency(custoTotal)}</td>
+            </tr></tfoot>
+        </table>
+        <p style="font-size:.8rem;color:var(--text-secondary);margin-top:10px">
+            💡 Clique em qualquer linha para ver os detalhes da manutenção.
+        </p>`;
+
+    openModal("modalManutencoesLoja");
+};
+
+
 async function loadUsuarios() {
     try {
         const lista = await api.listarUsuarios();

@@ -1423,3 +1423,8 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
     color: #f1f5f9 !important;
     border: 1px solid #334155;
 }
+
+/* ─── Ranking de Lojas: linha clicável ──────────────────────────────────────── */
+.ranking-loja-row:hover td { background: #eff6ff; }
+.ranking-loja-row:hover .link-equipamento { text-decoration: underline; color: var(--primary-color); }
+[data-theme="dark"] .ranking-loja-row:hover td { background: #1e3a5f; }
