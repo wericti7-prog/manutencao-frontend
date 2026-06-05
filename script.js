@@ -1041,13 +1041,15 @@ async function gerarRelatorio() {
                 if (m.status === "Concluída" || m.status === "Cancelada") porLoja[loja].concluidas++;
                 else porLoja[loja].abertas++;
             });
+            // Armazena os dados em variável global para evitar problemas com JSON inline no onclick
+            window._rankingTodasManutencoes = todas;
             const ranking = Object.entries(porLoja).sort((a, b) => b[1].custo - a[1].custo);
             const maxCusto = ranking[0]?.[1].custo || 1;
             const rows = ranking.map(([loja, d], i) => {
                 const pct = Math.round((d.custo / maxCusto) * 100);
                 const medalha = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i+1}º`;
-                const lojaEsc = loja.replace(/'/g, "\\'");
-                return `<tr class="ranking-loja-row" onclick="window.verManutencoesLoja('${lojaEsc}', ${JSON.stringify(todas).replace(/'/g, "\\'")})" title="Clique para ver as manutenções desta loja" style="cursor:pointer">
+                const lojaEsc = loja.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                return `<tr class="ranking-loja-row" onclick="window.verManutencoesLoja('${lojaEsc}')" title="Clique para ver as manutenções desta loja" style="cursor:pointer">
                     <td style="font-weight:700;font-size:1.1rem">${medalha}</td>
                     <td style="font-weight:600">
                         <span class="link-equipamento">${loja}</span>
@@ -1079,7 +1081,8 @@ async function gerarRelatorio() {
 }
 
 // ─── Modal: Manutenções de uma Loja ──────────────────────────────────────────
-window.verManutencoesLoja = function(loja, todasManutencoes) {
+window.verManutencoesLoja = function(loja) {
+    const todasManutencoes = window._rankingTodasManutencoes || [];
     const lista = todasManutencoes.filter(m => (m.localizacao || "Sem loja") === loja);
     document.getElementById("modalManutencoesLojaTitle").textContent = `📍 ${loja} — ${lista.length} manutenção(ões)`;
 
