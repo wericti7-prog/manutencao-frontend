@@ -949,10 +949,8 @@ async function loadEstatisticasPeriodo() {
         const ini = document.getElementById("dataInicio").value;
         const fim = document.getElementById("dataFim").value;
         const todas = await api.listarManutencoes();
-        // Para o ranking de lojas, incluímos registros sem data_inicio
-        // Para os demais relatórios mantemos o filtro de período
         const filtrada = todas.filter(m => {
-            if (!m.data_inicio) return tipo === "lojas";
+            if (!m.data_inicio) return false;
             const d = new Date(m.data_inicio);
             return d >= new Date(ini) && d <= new Date(fim + "T23:59:59");
         });
@@ -981,10 +979,8 @@ async function gerarRelatorio() {
 
     try {
         const todas = await api.listarManutencoes();
-        // Para o ranking de lojas, incluímos registros sem data_inicio
-        // Para os demais relatórios mantemos o filtro de período
         const filtrada = todas.filter(m => {
-            if (!m.data_inicio) return tipo === "lojas";
+            if (!m.data_inicio) return false;
             const d = new Date(m.data_inicio);
             return d >= new Date(ini) && d <= new Date(fim + "T23:59:59");
         });
@@ -1034,9 +1030,10 @@ async function gerarRelatorio() {
 
         } else if (tipo === "lojas") {
             title.textContent = "Ranking de Lojas — Manutenções e Gastos";
-            if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; return; }
+            // Usa TODAS as manutenções — sem filtro de período — para garantir que todas as lojas apareçam
+            if (!todas.length) { el.innerHTML = "<p>Nenhuma manutenção cadastrada.</p>"; return; }
             const porLoja = {};
-            filtrada.forEach(m => {
+            todas.forEach(m => {
                 const loja = m.localizacao || "Sem loja";
                 if (!porLoja[loja]) porLoja[loja] = { total: 0, concluidas: 0, abertas: 0, custo: 0 };
                 porLoja[loja].total++;
@@ -1067,7 +1064,7 @@ async function gerarRelatorio() {
             }).join("");
             el.innerHTML = `
                 <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:12px">
-                    Ordenado por maior gasto total. Concluídas / Em aberto.
+                    Todas as lojas · Ordenado por maior gasto total. Concluídas / Em aberto.
                 </p>
                 <table>
                     <thead><tr><th>#</th><th>Loja</th><th>Atendimentos</th><th>Concluídas / Abertas</th><th>Gasto Total</th><th>Gasto Médio</th></tr></thead>
