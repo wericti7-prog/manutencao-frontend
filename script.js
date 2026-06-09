@@ -1198,6 +1198,8 @@ window.verDetalhesFromLoja = async function(id) {
     }
     modalDetalhes.addEventListener("click", clickFora);
 };
+
+async function loadUsuarios() {
     try {
         const lista = await api.listarUsuarios();
         const rows = lista.map(u => `
