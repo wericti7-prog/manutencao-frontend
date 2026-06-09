@@ -1127,7 +1127,7 @@ window.verManutencoesLoja = function(loja) {
     });
 
     const rows = ordenada.map(m => `
-        <tr style="cursor:pointer" onclick="verDetalhes(${m.id})" title="Ver detalhes">
+        <tr style="cursor:pointer" onclick="verDetalhesFromLoja(${m.id})" title="Ver detalhes">
             <td><span class="id-badge">${m.numero}</span></td>
             <td><span class="link-equipamento">${m.equipamento}</span></td>
             <td>${m.tecnico || "-"}</td>
@@ -1157,8 +1157,47 @@ window.verManutencoesLoja = function(loja) {
     openModal("modalManutencoesLoja");
 };
 
+// Abre detalhes a partir do modal da loja:
+// fecha o modal da loja, abre detalhes e ao fechar detalhes reabre a loja
+window.verDetalhesFromLoja = async function(id) {
+    // Guarda qual loja estava aberta para poder voltar
+    const titulo = document.getElementById("modalManutencoesLojaTitle").textContent;
+    const conteudo = document.getElementById("modalManutencoesLojaContent").innerHTML;
 
-async function loadUsuarios() {
+    closeModal("modalManutencoesLoja");
+    await verDetalhes(id);
+
+    // Observa o fechamento do modal de detalhes para reabrir o da loja
+    const modalDetalhes = document.getElementById("modalDetalhes");
+    function onFecharDetalhes() {
+        // Restaura o conteúdo do modal da loja e reabre
+        document.getElementById("modalManutencoesLojaTitle").textContent   = titulo;
+        document.getElementById("modalManutencoesLojaContent").innerHTML   = conteudo;
+        openModal("modalManutencoesLoja");
+        modalDetalhes.removeEventListener("click", clickFora);
+        document.querySelectorAll(".close[data-modal='modalDetalhes']").forEach(b =>
+            b.removeEventListener("click", onFecharDetalhes)
+        );
+        document.querySelectorAll(".btn-secondary[data-modal='modalDetalhes']").forEach(b =>
+            b.removeEventListener("click", onFecharDetalhes)
+        );
+    }
+
+    // Escuta clique no X e no botão Fechar do modal de detalhes
+    document.querySelectorAll(".close[data-modal='modalDetalhes']").forEach(b =>
+        b.addEventListener("click", onFecharDetalhes, { once: true })
+    );
+    document.querySelectorAll(".btn-secondary[data-modal='modalDetalhes']").forEach(b =>
+        b.addEventListener("click", onFecharDetalhes, { once: true })
+    );
+    // Escuta clique no backdrop
+    function clickFora(e) {
+        if (e.target === modalDetalhes) {
+            onFecharDetalhes();
+        }
+    }
+    modalDetalhes.addEventListener("click", clickFora);
+};
     try {
         const lista = await api.listarUsuarios();
         const rows = lista.map(u => `
