@@ -757,6 +757,11 @@ window.verHistorico = async function(id) {
         const [m, logs, anexos] = await Promise.all([api.getManutencao(id), api.getHistorico(id), api.listarAnexos(id).catch(() => [])]);
         const statusEx = m.resultado_reparo || m.status_equipamento || m.status;
 
+        // logs vêm em ordem decrescente (mais recente primeiro).
+        // Cada log salva o snapshot ANTES da edição, e editado_por = quem fez aquela edição.
+        // "Estado atual" → quem alterou para o estado atual = logs[0].editado_por
+        // Linha do log[i] (snapshot) → quem gerou aquele estado = logs[i+1].editado_por
+        //   (log seguinte/mais antigo), ou m.criado_por para o log mais antigo.
         const ultimoEditor = logs.length > 0 ? logs[0].editado_por : m.criado_por;
         const linhaAtual = `<tr style="background:#f0fdf4">
             <td style="font-size:.82rem;color:#6b7280">${formatDateTime(m.data_fim || m.data_inicio)}</td>
@@ -768,12 +773,15 @@ window.verHistorico = async function(id) {
             <td>${formatCurrency(m.custo)}</td>
         </tr>`;
 
-        const linhasLog = logs.map(e => {
+        const linhasLog = logs.map((e, i) => {
             const s = e.snapshot || {};
+            // Quem gerou o estado deste snapshot = quem editou no log seguinte (mais antigo),
+            // ou o criador do chamado se for o log mais antigo (último do array).
+            const quemGerou = (i + 1 < logs.length) ? logs[i + 1].editado_por : m.criado_por;
             return `<tr>
                 <td style="font-size:.82rem;color:#6b7280">${formatDateTime(e.ts)}</td>
                 <td><span class="edit-log-motivo-badge">${e.motivo || "Edição"}</span></td>
-                <td><span class="historico-usuario">${e.editado_por || "-"}</span></td>
+                <td><span class="historico-usuario">${quemGerou || "-"}</span></td>
                 <td>${s.tecnico || "-"}</td>
                 <td><span class="badge ${getStatusBadge(s.status)}">${s.status || "-"}</span></td>
                 <td class="problema-cell">${(s.problema || "-").substring(0,50)}</td>
