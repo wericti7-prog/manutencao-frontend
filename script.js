@@ -19,6 +19,19 @@ const formatDate     = d => d ? new Date(d).toLocaleDateString("pt-BR") : "-";
 const formatDateTime = d => d ? new Date(d).toLocaleString("pt-BR")     : "-";
 const formatCurrency = v => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
+// ─── Sanitização anti-XSS ──────────────────────────────────────────────────────
+// Escapa qualquer dado vindo da API antes de inserir via innerHTML
+function esc(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;");
+}
+
+
 function getStatusBadge(s) {
     const map = {
         "Operacional":           "badge-operacional",
@@ -223,18 +236,18 @@ async function loadManutencoes() {
                 ${podeEditar  ? `<button class="btn-icon btn-edit"   onclick="editManutencao(${m.id})" title="Editar">✏️</button>` : ""}
                 ${podeExcluir ? `<button class="btn-icon btn-delete" onclick="deleteManutencao(${m.id})" title="Excluir">🗑️</button>` : ""}`;
             const badgeSubstituto = m.substituto && !["manutencao","observador"].includes(userRole)
-                ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄</span>`
+                ? `<span class="badge-substituto" title="Substituto: ${esc(m.substituto)}">🔄</span>`
                 : "";
             return `<tr>
-                <td><span class="id-badge">${m.numero}</span></td>
+                <td><span class="id-badge">${esc(m.numero)}</span></td>
                 <td>
-                    <button class="link-equipamento" onclick="verDetalhes(${m.id})">${m.equipamento}</button>
+                    <button class="link-equipamento" onclick="verDetalhes(${m.id})">${esc(m.equipamento)}</button>
                     ${badgeSubstituto}
                 </td>
                 <td>${m.localizacao || "-"}</td>
                 <td>${m.tecnico || "-"}</td>
                 <td class="problema-cell">${(m.problema || "-").substring(0,60)}${(m.problema||"").length>60?"…":""}</td>
-                <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+                <td><span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span></td>
                 <td>${formatCurrency(m.custo)}</td>
                 <td><div class="action-buttons">${acoes}</div></td>
             </tr>`;
@@ -362,7 +375,7 @@ window.editManutencao = async function(id) {
             const _grp = _subEl.closest(".form-group");
             if (_grp) _grp.style.display = ["manutencao","observador"].includes(userRole) ? "none" : "";
         }
-        document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${m.numero}`;
+        document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${esc(m.numero)}`;
         document.getElementById("btnFinalizar").style.display = "inline-flex";
         document.getElementById("tecnicoAutoTag").style.display = "none";
         populateDatalist();
@@ -390,7 +403,7 @@ async function editManutencaoSimples(id) {
             const _grpS = _subSimples.closest(".form-group");
             if (_grpS) _grpS.style.display = "none";
         }
-        modal.querySelector("#simplesTitle").textContent = `Editar #${m.numero} — ${m.equipamento}`;
+        modal.querySelector("#simplesTitle").textContent = `Editar #${esc(m.numero)} — ${esc(m.equipamento)}`;
         // Guardar id para upload de anexos
         document.getElementById("simplesAnexoBtn")?.setAttribute("data-id", m.id);
         _simplesManutId = m.id;
@@ -412,8 +425,8 @@ async function nfRenderizarSimples(manutencaoId) {
                 <div class="nf-item">
                     <span class="nf-icone">${nfIcone(a.tipo)}</span>
                     <div class="nf-info">
-                        <span class="nf-nome">${a.nome}</span>
-                        <span class="nf-meta">${nfFormatarTamanho(a.tamanho)} · ${a.data}</span>
+                        <span class="nf-nome">${esc(a.nome)}</span>
+                        <span class="nf-meta">${nfFormatarTamanho(a.tamanho)} · ${esc(a.data)}</span>
                     </div>
                     <div class="nf-acoes">
                         <button type="button" class="btn-nf btn-nf-ver" onclick="nfDownload('${encodeURIComponent(a.base64)}','${encodeURIComponent(a.nome)}')" title="Baixar">⬇️</button>
@@ -446,7 +459,7 @@ window.simplesAnexarArquivo = async function() {
     input.onchange = async () => {
         const MAX = 5 * 1024 * 1024;
         for (const file of input.files) {
-            if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); continue; }
+            if (file.size > MAX) { alert(`"${esc(file.name)}" ultrapassa 5 MB.`); continue; }
             const base64 = await new Promise(res => {
                 const r = new FileReader();
                 r.onload = e => res(e.target.result);
@@ -493,12 +506,12 @@ window.verDetalhes = async function(id) {
         const [m, anexos] = await Promise.all([api.getManutencao(id), api.listarAnexos(id).catch(() => [])]);
         const statusEx  = m.resultado_reparo || m.status_equipamento || m.status;
         const reparoHtml = m.resultado_reparo
-            ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span></div>` : "";
+            ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${esc(m.resultado_reparo)}</span></div>` : "";
 
         const detalhesHtml = `
             <div class="historico-info"><div class="historico-info-grid">
-                <div><strong>Nº:</strong> <span class="id-badge">${m.numero}</span></div>
-                <div><strong>Equipamento:</strong> ${m.equipamento}</div>
+                <div><strong>Nº:</strong> <span class="id-badge">${esc(m.numero)}</span></div>
+                <div><strong>Equipamento:</strong> ${esc(m.equipamento)}</div>
                 <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
                 <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
                 <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
@@ -506,7 +519,7 @@ window.verDetalhes = async function(id) {
                 <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
                 ${reparoHtml}
                 <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
-                ${m.pecas ? `<div><strong>Peças:</strong> ${m.pecas}</div>` : ""}
+                ${m.pecas ? `<div><strong>Peças:</strong> ${esc(m.pecas)}</div>` : ""}
             </div></div>
             <div style="margin-top:16px"><p><strong>Problema:</strong></p>
                 <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
@@ -522,13 +535,13 @@ window.verDetalhes = async function(id) {
         if (userRole === "observador") {
             document.getElementById("modalDetalhesLayoutSimples").style.display = "none";
             document.getElementById("modalDetalhesLayoutChat").style.display    = "flex";
-            document.getElementById("modalDetalhesTitleChat").textContent       = `Atendimento #${m.numero}`;
+            document.getElementById("modalDetalhesTitleChat").textContent       = `Atendimento #${esc(m.numero)}`;
             document.getElementById("modalDetalhesContentChat").innerHTML       = detalhesHtml;
             eqChatIniciar(m.id, false, "detalhes");
         } else {
             document.getElementById("modalDetalhesLayoutSimples").style.display = "";
             document.getElementById("modalDetalhesLayoutChat").style.display    = "none";
-            document.getElementById("modalDetalhesTitle").textContent           = `Atendimento #${m.numero}`;
+            document.getElementById("modalDetalhesTitle").textContent           = `Atendimento #${esc(m.numero)}`;
             document.getElementById("modalDetalhesContent").innerHTML           = detalhesHtml;
         }
 
@@ -565,24 +578,24 @@ async function detCarregarRespostas(id, userRole) {
                         <div class="nf-item" style="margin-top:6px">
                             <span class="nf-icone">${nfIcone(a.tipo)}</span>
                             <div class="nf-info">
-                                <span class="nf-nome">${a.nome}</span>
-                                <span class="nf-meta">${nfFormatarTamanho(a.tamanho)} · ${a.data}</span>
+                                <span class="nf-nome">${esc(a.nome)}</span>
+                                <span class="nf-meta">${nfFormatarTamanho(a.tamanho)} · ${esc(a.data)}</span>
                             </div>
                             <div class="nf-acoes">
                                 <button type="button" class="btn-nf btn-nf-ver"
-                                    onclick="detVisualizarAnexoResposta('${a.base64}','${a.nome}','${a.tipo}')" title="Visualizar">👁️</button>
+                                    onclick="detVisualizarAnexoResposta('${a.base64}','${esc(a.nome)}','${esc(a.tipo)}')" title="Visualizar">👁️</button>
                                 <button type="button" class="btn-nf btn-nf-baixar"
-                                    onclick="detBaixarAnexoResposta('${a.base64}','${a.nome}')" title="Download">⬇️</button>
+                                    onclick="detBaixarAnexoResposta('${a.base64}','${esc(a.nome)}')" title="Download">⬇️</button>
                             </div>
                         </div>`).join("") || "";
                     return `
                         <div style="border-left:3px solid ${borda};background:${cor};
                                     padding:12px 14px;border-radius:0 8px 8px 0;margin-bottom:10px">
                             <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                                <strong style="font-size:.88rem">${label} — ${r.autor}</strong>
+                                <strong style="font-size:.88rem">${label} — ${esc(r.autor)}</strong>
                                 <span style="font-size:.78rem;color:var(--text-secondary)">${formatDateTime(r.criado_em)}</span>
                             </div>
-                            ${r.texto ? `<p style="font-size:.9rem;margin:0 0 6px">${r.texto}</p>` : ""}
+                            ${r.texto ? `<p style="font-size:.9rem;margin:0 0 6px">${esc(r.texto)}</p>` : ""}
                             ${anexosHtml}
                         </div>`;
                 }).join("");
@@ -641,7 +654,7 @@ async function detCarregarRespostas(id, userRole) {
         dz.addEventListener("drop", e => { e.preventDefault(); dz.classList.remove("nf-drag-over"); respAdicionarArquivos(id, e.dataTransfer.files); });
 
     } catch (err) {
-        if (contentEl) contentEl.innerHTML = `<p style="color:red">Erro ao carregar: ${err.message}</p>`;
+        if (contentEl) contentEl.innerHTML = `<p style="color:red">Erro ao carregar: ${esc(err.message)}</p>`;
     }
 }
 
@@ -679,7 +692,7 @@ function respAdicionarArquivos(id, files) {
     const MAX = 5 * 1024 * 1024;
     const lista = window[`_respAnexos_${id}`] || [];
     Array.from(files).forEach(file => {
-        if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); return; }
+        if (file.size > MAX) { alert(`"${esc(file.name)}" ultrapassa 5 MB.`); return; }
         const reader = new FileReader();
         reader.onload = e => {
             lista.push({ nome: file.name, tipo: file.type, tamanho: file.size,
@@ -700,7 +713,7 @@ function respRenderizarLista(id) {
         <div class="nf-item">
             <span class="nf-icone">${nfIcone(a.tipo)}</span>
             <div class="nf-info">
-                <span class="nf-nome">${a.nome}</span>
+                <span class="nf-nome">${esc(a.nome)}</span>
                 <span class="nf-meta">${nfFormatarTamanho(a.tamanho)}</span>
             </div>
             <div class="nf-acoes">
@@ -767,14 +780,14 @@ window.verHistorico = async function(id) {
             </tr>`;
         }).join("");
 
-        document.getElementById("modalDetalhesTitle").textContent = `Histórico — Atendimento #${m.numero}`;
+        document.getElementById("modalDetalhesTitle").textContent = `Histórico — Atendimento #${esc(m.numero)}`;
         document.getElementById("modalDetalhesContent").innerHTML = `
             <div class="historico-info" style="margin-bottom:16px">
                 <div class="historico-info-grid">
-                    <div><strong>Equipamento:</strong> ${m.equipamento}</div>
+                    <div><strong>Equipamento:</strong> ${esc(m.equipamento)}</div>
                     <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
                     <div><strong>Status atual:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
-                    ${m.resultado_reparo ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span></div>` : ""}
+                    ${m.resultado_reparo ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${esc(m.resultado_reparo)}</span></div>` : ""}
                     <div><strong>Edições registradas:</strong> ${logs.length}</div>
                 </div>
             </div>
@@ -851,19 +864,19 @@ function _renderFinalizados() {
 
     const rows = paginados.map(m => {
         const badgeSub = m.substituto && !["manutencao","observador"].includes(u?.role)
-            ? `<span class="badge-substituto" title="Substituto: ${m.substituto}">🔄</span>`
+            ? `<span class="badge-substituto" title="Substituto: ${esc(m.substituto)}">🔄</span>`
             : "";
         return `<tr>
-            <td><span class="id-badge">${m.numero}</span></td>
+            <td><span class="id-badge">${esc(m.numero)}</span></td>
             <td>
-                <button class="link-equipamento" onclick="verDetalhes(${m.id})">${m.equipamento}</button>
+                <button class="link-equipamento" onclick="verDetalhes(${m.id})">${esc(m.equipamento)}</button>
                 ${badgeSub}
             </td>
             <td>${m.localizacao || "-"}</td>
             <td>${m.tecnico || "-"}</td>
             <td>${formatDateTime(m.data_inicio)}</td>
             <td>${formatDateTime(m.data_fim)}</td>
-            <td>${m.resultado_reparo ? `<span class="badge ${getStatusBadge(m.resultado_reparo)}">${m.resultado_reparo}</span>` : "—"}</td>
+            <td>${m.resultado_reparo ? `<span class="badge ${getStatusBadge(m.resultado_reparo)}">${esc(m.resultado_reparo)}</span>` : "—"}</td>
             <td>${formatCurrency(m.custo)}</td>
             <td>
                 <div class="action-buttons">
@@ -990,11 +1003,11 @@ async function gerarRelatorio() {
             if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; return; }
             const rows = filtrada.map(m => `
                 <tr>
-                    <td><span class="id-badge">${m.numero}</span></td>
-                    <td>${m.equipamento}</td>
+                    <td><span class="id-badge">${esc(m.numero)}</span></td>
+                    <td>${esc(m.equipamento)}</td>
                     <td>${m.localizacao || "-"}</td>
                     <td>${m.tecnico || "-"}</td>
-                    <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+                    <td><span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span></td>
                     <td>${formatDate(m.data_inicio)}</td>
                     <td>${formatDate(m.data_fim)}</td>
                     <td>${formatCurrency(m.custo)}</td>
@@ -1127,11 +1140,11 @@ window.verManutencoesLoja = function(loja) {
     });
 
     const rows = ordenada.map(m => `
-        <tr style="cursor:pointer" onclick="verDetalhesFromLoja(${m.id})" title="Ver detalhes">
-            <td><span class="id-badge">${m.numero}</span></td>
-            <td><span class="link-equipamento">${m.equipamento}</span></td>
+        <tr style="cursor:pointer" onclick="verDetalhes(${m.id})" title="Ver detalhes">
+            <td><span class="id-badge">${esc(m.numero)}</span></td>
+            <td><span class="link-equipamento">${esc(m.equipamento)}</span></td>
             <td>${m.tecnico || "-"}</td>
-            <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+            <td><span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span></td>
             <td>${formatDate(m.data_inicio)}</td>
             <td>${formatDate(m.data_fim)}</td>
             <td style="font-weight:600">${formatCurrency(m.custo)}</td>
@@ -1157,55 +1170,14 @@ window.verManutencoesLoja = function(loja) {
     openModal("modalManutencoesLoja");
 };
 
-// Abre detalhes a partir do modal da loja:
-// fecha o modal da loja, abre detalhes e ao fechar detalhes reabre a loja
-window.verDetalhesFromLoja = async function(id) {
-    // Guarda qual loja estava aberta para poder voltar
-    const titulo = document.getElementById("modalManutencoesLojaTitle").textContent;
-    const conteudo = document.getElementById("modalManutencoesLojaContent").innerHTML;
-
-    closeModal("modalManutencoesLoja");
-    await verDetalhes(id);
-
-    // Observa o fechamento do modal de detalhes para reabrir o da loja
-    const modalDetalhes = document.getElementById("modalDetalhes");
-    function onFecharDetalhes() {
-        // Restaura o conteúdo do modal da loja e reabre
-        document.getElementById("modalManutencoesLojaTitle").textContent   = titulo;
-        document.getElementById("modalManutencoesLojaContent").innerHTML   = conteudo;
-        openModal("modalManutencoesLoja");
-        modalDetalhes.removeEventListener("click", clickFora);
-        document.querySelectorAll(".close[data-modal='modalDetalhes']").forEach(b =>
-            b.removeEventListener("click", onFecharDetalhes)
-        );
-        document.querySelectorAll(".btn-secondary[data-modal='modalDetalhes']").forEach(b =>
-            b.removeEventListener("click", onFecharDetalhes)
-        );
-    }
-
-    // Escuta clique no X e no botão Fechar do modal de detalhes
-    document.querySelectorAll(".close[data-modal='modalDetalhes']").forEach(b =>
-        b.addEventListener("click", onFecharDetalhes, { once: true })
-    );
-    document.querySelectorAll(".btn-secondary[data-modal='modalDetalhes']").forEach(b =>
-        b.addEventListener("click", onFecharDetalhes, { once: true })
-    );
-    // Escuta clique no backdrop
-    function clickFora(e) {
-        if (e.target === modalDetalhes) {
-            onFecharDetalhes();
-        }
-    }
-    modalDetalhes.addEventListener("click", clickFora);
-};
 
 async function loadUsuarios() {
     try {
         const lista = await api.listarUsuarios();
         const rows = lista.map(u => `
             <tr>
-                <td>${u.nome}</td>
-                <td>${u.username}</td>
+                <td>${esc(u.nome)}</td>
+                <td>${esc(u.username)}</td>
                 <td><span class="badge ${
                 {gerencia:"badge-info", admin:"badge-info",
                  manutencao:"badge-warning", observador:"badge-info",
@@ -1215,8 +1187,8 @@ async function loadUsuarios() {
                  observador:"Observador", tecnico:"Técnico"}[u.role] || u.role
             }</span></td>
                 <td>${formatDate(u.criado_em)}</td>
-                <td><button class="btn-icon btn-edit" onclick="editarUsuario(${u.id}, '${u.nome}', '${u.username}', '${u.role}')" title="Editar">✏️</button>
-                    <button class="btn-icon btn-delete" onclick="removeUsuario(${u.id}, '${u.username}')">🗑️</button></td>
+                <td><button class="btn-icon btn-edit" onclick="editarUsuario(${u.id}, '${esc(u.nome)}', '${esc(u.username)}', '${esc(u.role)}')" title="Editar">✏️</button>
+                    <button class="btn-icon btn-delete" onclick="removeUsuario(${u.id}, '${esc(u.username)}')">🗑️</button></td>
             </tr>`).join("");
         document.getElementById("listaUsuarios").innerHTML = `
             <table>
@@ -1321,8 +1293,8 @@ async function nfRenderizar(id) {
         <div class="nf-item">
             <span class="nf-icone">${nfIcone(arq.tipo)}</span>
             <div class="nf-info">
-                <span class="nf-nome">${arq.nome}</span>
-                <span class="nf-meta">${nfFormatarTamanho(arq.tamanho)} · ${arq.data}</span>
+                <span class="nf-nome">${esc(arq.nome)}</span>
+                <span class="nf-meta">${nfFormatarTamanho(arq.tamanho)} · ${esc(arq.data)}</span>
             </div>
             <div class="nf-acoes">
                 <button type="button" class="btn-nf btn-nf-ver"      onclick="nfVisualizar(${i},'${id}')" title="Visualizar">👁️</button>
@@ -1339,7 +1311,7 @@ window.nfAdicionarArquivos = function(files) {
 
     Array.from(files).forEach(file => {
         if (file.size > NF_MAX_BYTES) {
-            alert(`"${file.name}" ultrapassa 5 MB e não foi adicionado.`);
+            alert(`"${esc(file.name)}" ultrapassa 5 MB e não foi adicionado.`);
             return;
         }
         const reader = new FileReader();
@@ -1385,8 +1357,8 @@ function nfHtmlSomenteLeitura(lista, id) {
         <div class="nf-item">
             <span class="nf-icone">${nfIcone(arq.tipo)}</span>
             <div class="nf-info">
-                <span class="nf-nome">${arq.nome}</span>
-                <span class="nf-meta">${nfFormatarTamanho(arq.tamanho)} · ${arq.data}</span>
+                <span class="nf-nome">${esc(arq.nome)}</span>
+                <span class="nf-meta">${nfFormatarTamanho(arq.tamanho)} · ${esc(arq.data)}</span>
             </div>
             <div class="nf-acoes">
                 <button type="button" class="btn-nf btn-nf-ver"    onclick="nfVisualizar(${i},'${id}')" title="Visualizar">👁️</button>
@@ -1411,14 +1383,14 @@ window.nfVisualizar = async function(i, id) {
 
     const body = document.getElementById("modalAnexoBody");
     if (arq.tipo.includes("image")) {
-        body.innerHTML = `<img src="${arq.base64}" alt="${arq.nome}" class="modal-anexo-img">`;
+        body.innerHTML = `<img src="${arq.base64}" alt="${esc(arq.nome)}" class="modal-anexo-img">`;
     } else if (arq.tipo.includes("pdf")) {
         body.innerHTML = `<iframe src="${arq.base64}" class="modal-anexo-iframe"></iframe>`;
     } else {
         body.innerHTML = `
             <div class="modal-anexo-sem-preview">
                 <div style="font-size:4rem;margin-bottom:16px">${nfIcone(arq.tipo)}</div>
-                <p style="font-size:1.05rem;font-weight:600;color:var(--text-primary);margin-bottom:8px">${arq.nome}</p>
+                <p style="font-size:1.05rem;font-weight:600;color:var(--text-primary);margin-bottom:8px">${esc(arq.nome)}</p>
                 <p style="font-size:.9rem;color:var(--text-secondary)">
                     Este tipo de arquivo não pode ser visualizado aqui.<br>Use o botão Download para abrir.
                 </p>
@@ -1504,11 +1476,11 @@ async function loadLixeira() {
         const rows = await Promise.all(lista.map(async m => {
             const deletadoEm = m.deletado_em ? new Date(m.deletado_em).toLocaleString("pt-BR") : "—";
             return `<tr>
-                <td><span class="id-badge">#${m.numero}</span></td>
-                <td>${m.equipamento}</td>
+                <td><span class="id-badge">#${esc(m.numero)}</span></td>
+                <td>${esc(m.equipamento)}</td>
                 <td>${m.localizacao || "—"}</td>
                 <td>${m.tecnico || "—"}</td>
-                <td><span class="badge ${getStatusBadge(m.status)}">${m.status}</span></td>
+                <td><span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span></td>
                 <td style="font-size:.85rem;color:var(--text-secondary)">${deletadoEm}</td>
                 <td style="font-size:.85rem;color:var(--text-secondary)">${m.deletado_por || "—"}</td>
                 <td>
@@ -1607,7 +1579,7 @@ function _chatBolha(autor, role, texto, criado_em, anexos, minha, prefixo) {
             <div class="chat-anexo" onclick="chatVerAnexo('${encodeURIComponent(a.base64)}','${encodeURIComponent(a.nome)}','${encodeURIComponent(a.tipo)}')">
                 <span class="chat-anexo-icone">${nfIcone(a.tipo)}</span>
                 <div class="chat-anexo-info">
-                    <span class="chat-anexo-nome">${a.nome}</span>
+                    <span class="chat-anexo-nome">${esc(a.nome)}</span>
                     <span class="chat-anexo-meta">${nfFormatarTamanho(a.tamanho)}</span>
                 </div>
                 <span class="chat-anexo-dl">⬇️</span>
@@ -1714,7 +1686,7 @@ window.chatKeyDown = function(e) {
 function _chatAdicionarArquivos(files) {
     const MAX = 5 * 1024 * 1024;
     Array.from(files).forEach(file => {
-        if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); return; }
+        if (file.size > MAX) { alert(`"${esc(file.name)}" ultrapassa 5 MB.`); return; }
         const reader = new FileReader();
         reader.onload = ev => {
             _chatAnexos.push({ nome: file.name, tipo: file.type, tamanho: file.size,
@@ -1731,7 +1703,7 @@ function _chatRenderizarPreview() {
     el.innerHTML = _chatAnexos.map((a, i) => `
         <div class="chat-preview-item">
             <span>${nfIcone(a.tipo)}</span>
-            <span class="chat-preview-nome">${a.nome}</span>
+            <span class="chat-preview-nome">${esc(a.nome)}</span>
             <button onclick="window.chatRemoverAnexo(${i})" class="chat-preview-rm">✕</button>
         </div>`).join("");
     el.style.display = _chatAnexos.length ? "block" : "none";
@@ -1849,7 +1821,7 @@ window.eqChatKeyDown = function(e) {
 function _eqAdicionarArquivos(files) {
     const MAX = 5 * 1024 * 1024;
     Array.from(files).forEach(file => {
-        if (file.size > MAX) { alert(`"${file.name}" ultrapassa 5 MB.`); return; }
+        if (file.size > MAX) { alert(`"${esc(file.name)}" ultrapassa 5 MB.`); return; }
         const reader = new FileReader();
         reader.onload = ev => {
             _eqChatAnexos.push({ nome: file.name, tipo: file.type, tamanho: file.size,
@@ -1866,7 +1838,7 @@ function _eqRenderizarPreview() {
     el.innerHTML = _eqChatAnexos.map((a, i) => `
         <div class="chat-preview-item">
             <span>${nfIcone(a.tipo)}</span>
-            <span class="chat-preview-nome">${a.nome}</span>
+            <span class="chat-preview-nome">${esc(a.nome)}</span>
             <button onclick="window.eqChatRemoverAnexo(${i})" class="chat-preview-rm">✕</button>
         </div>`).join("");
     el.style.display = _eqChatAnexos.length ? "block" : "none";
