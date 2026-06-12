@@ -757,12 +757,13 @@ window.verHistorico = async function(id) {
         const [m, logs, anexos] = await Promise.all([api.getManutencao(id), api.getHistorico(id), api.listarAnexos(id).catch(() => [])]);
         const statusEx = m.resultado_reparo || m.status_equipamento || m.status;
 
-        const ultimoEditor = logs.length > 0 ? (logs[0].editado_por || m.criado_por) : m.criado_por;
+        const ultimoEditor = logs.length > 0 ? logs[0].editado_por : m.criado_por;
+        const tecnicoAtual = m.tecnico || (logs.length > 0 ? (logs[0].snapshot?.tecnico || "") : "") || "-";
         const linhaAtual = `<tr style="background:#f0fdf4">
             <td style="font-size:.82rem;color:#6b7280">${formatDateTime(m.data_fim || m.data_inicio)}</td>
             <td><span class="edit-log-motivo-badge atual">Estado atual</span></td>
             <td><span class="historico-usuario">${esc(ultimoEditor) || "-"}</span></td>
-            <td>${esc(m.tecnico) || "-"}</td>
+            <td>${esc(tecnicoAtual)}</td>
             <td><span class="badge ${getStatusBadge(statusEx)}">${esc(statusEx)}</span></td>
             <td class="problema-cell">${esc((m.problema || "-").substring(0,50))}</td>
             <td>${formatCurrency(m.custo)}</td>
@@ -772,11 +773,11 @@ window.verHistorico = async function(id) {
             const s = e.snapshot || {};
             return `<tr>
                 <td style="font-size:.82rem;color:#6b7280">${formatDateTime(e.ts)}</td>
-                <td><span class="edit-log-motivo-badge">${esc(e.motivo) || "Edição"}</span></td>
-                <td><span class="historico-usuario">${esc(e.editado_por) || "-"}</span></td>
-                <td>${esc(s.tecnico) || "-"}</td>
-                <td><span class="badge ${getStatusBadge(s.status)}">${esc(s.status) || "-"}</span></td>
-                <td class="problema-cell">${esc((s.problema || "-").substring(0,50))}</td>
+                <td><span class="edit-log-motivo-badge">${e.motivo || "Edição"}</span></td>
+                <td><span class="historico-usuario">${e.editado_por || "-"}</span></td>
+                <td>${s.tecnico || "-"}</td>
+                <td><span class="badge ${getStatusBadge(s.status)}">${s.status || "-"}</span></td>
+                <td class="problema-cell">${(s.problema || "-").substring(0,50)}</td>
                 <td>${formatCurrency(s.custo)}</td>
             </tr>`;
         }).join("");
