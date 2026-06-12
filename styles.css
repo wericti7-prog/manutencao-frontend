@@ -1386,11 +1386,12 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
     background: #eff6ff;
     color: #1e40af;
     border: 1px solid #bfdbfe;
-    min-width: 24px;
-    min-height: 20px;
-    vertical-align: middle;
 }
 [data-theme="dark"] .historico-usuario { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
+
+/* Estado atual no histórico — cor adaptada ao tema */
+.linha-estado-atual td { background: #f0fdf4; color: var(--text-primary); }
+[data-theme="dark"] .linha-estado-atual td { background: #0f2a1a; color: #f1f5f9; }
 [data-theme="dark"] .detalhe-label { color: #94a3b8; }
 [data-theme="dark"] .detalhe-valor { color: #f1f5f9; }
 [data-theme="dark"] .detalhe-row { border-color: #334155; }

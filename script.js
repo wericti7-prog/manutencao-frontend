@@ -759,7 +759,7 @@ window.verHistorico = async function(id) {
 
         const ultimoEditor = logs.length > 0 ? logs[0].editado_por : m.criado_por;
         const tecnicoAtual = m.tecnico || (logs.length > 0 ? (logs[0].snapshot?.tecnico || "") : "") || "-";
-        const linhaAtual = `<tr style="background:#f0fdf4">
+        const linhaAtual = `<tr class="linha-estado-atual">
             <td style="font-size:.82rem;color:#6b7280">${formatDateTime(m.data_fim || m.data_inicio)}</td>
             <td><span class="edit-log-motivo-badge atual">Estado atual</span></td>
             <td><span class="historico-usuario">${esc(ultimoEditor) || "-"}</span></td>
