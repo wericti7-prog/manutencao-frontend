@@ -760,7 +760,7 @@ window.verHistorico = async function(id) {
         const ultimoEditor = logs.length > 0 ? logs[0].editado_por : m.criado_por;
         const tecnicoAtual = m.tecnico || (logs.length > 0 ? (logs[0].snapshot?.tecnico || "") : "") || "-";
         const linhaAtual = `<tr class="linha-estado-atual">
-            <td style="font-size:.82rem;color:#6b7280">${formatDateTime(m.data_fim || m.data_inicio)}</td>
+            <td style="font-size:.82rem;color:#6b7280">${formatDateTime(m.atualizado_em || m.data_fim || m.data_inicio)}</td>
             <td><span class="edit-log-motivo-badge atual">Estado atual</span></td>
             <td><span class="historico-usuario">${esc(ultimoEditor) || "-"}</span></td>
             <td>${esc(tecnicoAtual)}</td>
@@ -769,16 +769,27 @@ window.verHistorico = async function(id) {
             <td>${formatCurrency(m.custo)}</td>
         </tr>`;
 
-        const linhasLog = logs.map(e => {
-            const s = e.snapshot || {};
+        // Cada log guarda o snapshot ANTES da edição e quem editou.
+        // Para mostrar o estado RESULTANTE de cada edição, usamos o snapshot
+        // do log ANTERIOR (mais antigo), que é logs[i+1].
+        // O último log (mais antigo) resultou no snapshot de logs[0] do próximo... 
+        // na prática: a linha i mostra editado_por=logs[i] e estado=snapshot de logs[i-1]
+        // exceto a primeira linha que mostra o estado atual (m).
+        const linhasLog = logs.map((e, i) => {
+            // Estado resultante desta edição = snapshot do log anterior (índice i-1)
+            // Para i=0 (edição mais recente) o resultado é o estado atual (m)
+            // Para i>0 o resultado é o snapshot de logs[i-1]
+            const resultado = i === 0
+                ? { tecnico: m.tecnico, status: statusEx, problema: m.problema, custo: m.custo }
+                : (logs[i - 1].snapshot || {});
             return `<tr>
                 <td style="font-size:.82rem;color:#6b7280">${formatDateTime(e.ts)}</td>
-                <td><span class="edit-log-motivo-badge">${e.motivo || "Edição"}</span></td>
-                <td><span class="historico-usuario">${e.editado_por || "-"}</span></td>
-                <td>${s.tecnico || "-"}</td>
-                <td><span class="badge ${getStatusBadge(s.status)}">${s.status || "-"}</span></td>
-                <td class="problema-cell">${(s.problema || "-").substring(0,50)}</td>
-                <td>${formatCurrency(s.custo)}</td>
+                <td><span class="edit-log-motivo-badge">${esc(e.motivo) || "Edição"}</span></td>
+                <td><span class="historico-usuario">${esc(e.editado_por) || "-"}</span></td>
+                <td>${esc(resultado.tecnico) || "-"}</td>
+                <td><span class="badge ${getStatusBadge(resultado.status)}">${esc(resultado.status) || "-"}</span></td>
+                <td class="problema-cell">${esc((resultado.problema || "-").substring(0,50))}</td>
+                <td>${formatCurrency(resultado.custo)}</td>
             </tr>`;
         }).join("");
 
