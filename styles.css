@@ -1376,6 +1376,17 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
 [data-theme="dark"] .login-title { color: #f1f5f9; }
 [data-theme="dark"] .login-subtitle { color: #94a3b8; }
 [data-theme="dark"] .empty-state { color: #64748b; }
+.historico-usuario {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: .82rem;
+    font-weight: 500;
+    white-space: nowrap;
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
 [data-theme="dark"] .historico-usuario { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
 [data-theme="dark"] .detalhe-label { color: #94a3b8; }
 [data-theme="dark"] .detalhe-valor { color: #f1f5f9; }

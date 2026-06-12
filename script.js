@@ -757,10 +757,11 @@ window.verHistorico = async function(id) {
         const [m, logs, anexos] = await Promise.all([api.getManutencao(id), api.getHistorico(id), api.listarAnexos(id).catch(() => [])]);
         const statusEx = m.resultado_reparo || m.status_equipamento || m.status;
 
+        const ultimoEditor = logs.length > 0 ? logs[0].editado_por : m.criado_por;
         const linhaAtual = `<tr style="background:#f0fdf4">
             <td style="font-size:.82rem;color:#6b7280">${formatDateTime(m.data_fim || m.data_inicio)}</td>
             <td><span class="edit-log-motivo-badge atual">Estado atual</span></td>
-            <td><span class="historico-usuario">${m.criado_por || "-"}</span></td>
+            <td><span class="historico-usuario">${ultimoEditor || m.criado_por || "-"}</span></td>
             <td>${m.tecnico || "-"}</td>
             <td><span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></td>
             <td class="problema-cell">${(m.problema || "-").substring(0,50)}</td>
