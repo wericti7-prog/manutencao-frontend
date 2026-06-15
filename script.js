@@ -1230,6 +1230,7 @@ window.verManutencoesLoja = function(loja) {
 async function loadUsuarios() {
     try {
         const lista = await api.listarUsuarios();
+        const u0 = lista[0];
         const rows = lista.map(u => `
             <tr>
                 <td>${esc(u.nome)}</td>
@@ -1243,12 +1244,13 @@ async function loadUsuarios() {
                  observador:"Observador", tecnico:"Técnico"}[u.role] || u.role
             }</span></td>
                 <td>${formatDate(u.criado_em)}</td>
+                <td>${u.ultimo_acesso ? formatDateTime(u.ultimo_acesso) : '<span style="color:var(--text-secondary);font-size:.82rem">Nunca</span>'}</td>
                 <td><button class="btn-icon btn-edit" onclick="editarUsuario(${u.id}, '${esc(u.nome)}', '${esc(u.username)}', '${esc(u.role)}')" title="Editar">✏️</button>
                     <button class="btn-icon btn-delete" onclick="removeUsuario(${u.id}, '${esc(u.username)}')">🗑️</button></td>
             </tr>`).join("");
         document.getElementById("listaUsuarios").innerHTML = `
             <table>
-                <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Criado em</th><th>Ações</th></tr></thead>
+                <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Criado em</th><th>Último acesso</th><th>Ações</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>`;
     } catch (err) { showError(err.message); }
