@@ -1954,7 +1954,7 @@ function _esconderBotoesExport() {
     if (el) el.style.display = "none";
 }
 
-function exportarExcel() {
+window.exportarExcel = function exportarExcel() {
     if (!_relatorioAtual.dados.length) return;
     const wb = XLSX.utils.book_new();
     const wsData = [_relatorioAtual.colunas, ..._relatorioAtual.dados];
@@ -1975,7 +1975,7 @@ function exportarExcel() {
     XLSX.writeFile(wb, nomeArquivo);
 }
 
-function exportarPDF() {
+window.exportarPDF = function exportarPDF() {
     if (!_relatorioAtual.dados.length) return;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
