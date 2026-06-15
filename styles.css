@@ -1443,3 +1443,18 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
 .ranking-loja-row:hover td { background: #eff6ff; }
 .ranking-loja-row:hover .link-equipamento { text-decoration: underline; color: var(--primary-color); }
 [data-theme="dark"] .ranking-loja-row:hover td { background: #1e3a5f; }
+
+/* ─── Botões de exportação de relatório ──────────────────────────────────────── */
+#botoesExport {
+    display: none;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+#botoesExport .btn {
+    font-size: .85rem;
+    padding: 7px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}

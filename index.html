@@ -259,6 +259,10 @@
     }
     .historico-usuario::before { content: "👤 "; font-style: normal; }
     </style>
+    <!-- Exportação PDF e Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <!-- Botão dark/light mode -->
@@ -459,7 +463,17 @@
                     <div id="estatisticasPeriodo" class="stats-grid"></div>
                 </div>
                 <div class="card full-width">
-                    <h3 id="resultadoRelatorioTitulo">Resultado</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+                        <h3 id="resultadoRelatorioTitulo" style="margin:0">Resultado</h3>
+                        <div id="botoesExport" style="display:none;gap:8px;display:none">
+                            <button class="btn btn-secondary" onclick="exportarPDF()" title="Exportar como PDF">
+                                📄 Exportar PDF
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportarExcel()" title="Exportar como Excel">
+                                📊 Exportar Excel
+                            </button>
+                        </div>
+                    </div>
                     <div id="resultadoRelatorio" class="relatorio-content"></div>
                 </div>
             </div>

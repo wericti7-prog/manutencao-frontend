@@ -1003,6 +1003,9 @@ document.getElementById("formRelatorio").addEventListener("submit", async e => {
     await gerarRelatorio();
 });
 
+// ─── Dados do relatório atual (para exportação) ───────────────────────────────
+let _relatorioAtual = { tipo: "", titulo: "", dados: [], colunas: [] };
+
 async function gerarRelatorio() {
     const tipo  = document.getElementById("tipoRelatorio").value;
     const ini   = document.getElementById("dataInicio").value;
@@ -1020,7 +1023,18 @@ async function gerarRelatorio() {
 
         if (tipo === "manutencoes") {
             title.textContent = "Histórico de Manutenções";
-            if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; return; }
+            if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; _esconderBotoesExport(); return; }
+            _relatorioAtual = {
+                tipo: "manutencoes",
+                titulo: `Histórico de Manutenções — ${ini} a ${fim}`,
+                colunas: ["Nº", "Equipamento", "Loja", "Técnico", "Status", "Início", "Conclusão", "Custo (R$)"],
+                dados: filtrada.map(m => [
+                    m.numero, m.equipamento, m.localizacao || "-", m.tecnico || "-",
+                    m.status, formatDate(m.data_inicio), formatDate(m.data_fim),
+                    (m.custo || 0).toFixed(2).replace(".", ",")
+                ])
+            };
+            _mostrarBotoesExport();
             const rows = filtrada.map(m => `
                 <tr>
                     <td><span class="id-badge">${esc(m.numero)}</span></td>
@@ -1039,7 +1053,7 @@ async function gerarRelatorio() {
 
         } else if (tipo === "custos") {
             title.textContent = "Análise de Custos";
-            if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; return; }
+            if (!filtrada.length) { el.innerHTML = "<p>Nenhuma manutenção no período.</p>"; _esconderBotoesExport(); return; }
             const porTecnico = {};
             filtrada.forEach(m => {
                 const t = m.tecnico || "Sem técnico";
@@ -1047,8 +1061,19 @@ async function gerarRelatorio() {
                 porTecnico[t].qtd++;
                 porTecnico[t].custo += m.custo || 0;
             });
-            const rows = Object.entries(porTecnico)
-                .sort((a, b) => b[1].custo - a[1].custo)
+            const entradasCusto = Object.entries(porTecnico).sort((a, b) => b[1].custo - a[1].custo);
+            _relatorioAtual = {
+                tipo: "custos",
+                titulo: `Análise de Custos — ${ini} a ${fim}`,
+                colunas: ["Técnico", "Atendimentos", "Custo Total (R$)", "Custo Médio (R$)"],
+                dados: entradasCusto.map(([tec, d]) => [
+                    tec, d.qtd,
+                    d.custo.toFixed(2).replace(".", ","),
+                    (d.qtd ? d.custo / d.qtd : 0).toFixed(2).replace(".", ",")
+                ])
+            };
+            _mostrarBotoesExport();
+            const rows = entradasCusto
                 .map(([tec, d]) => `
                 <tr>
                     <td>${tec}</td>
@@ -1064,7 +1089,7 @@ async function gerarRelatorio() {
         } else if (tipo === "lojas") {
             title.textContent = "Ranking de Lojas — Manutenções e Gastos";
             // Usa TODAS as manutenções — sem filtro de período — para garantir que todas as lojas apareçam
-            if (!todas.length) { el.innerHTML = "<p>Nenhuma manutenção cadastrada.</p>"; return; }
+            if (!todas.length) { el.innerHTML = "<p>Nenhuma manutenção cadastrada.</p>"; _esconderBotoesExport(); return; }
             const porLoja = {};
             todas.forEach(m => {
                 const loja = m.localizacao || "Sem loja";
@@ -1077,6 +1102,17 @@ async function gerarRelatorio() {
             // Armazena os dados em variável global para evitar problemas com JSON inline no onclick
             window._rankingTodasManutencoes = todas;
             const ranking = Object.entries(porLoja).sort((a, b) => b[1].custo - a[1].custo);
+            _relatorioAtual = {
+                tipo: "lojas",
+                titulo: "Ranking de Lojas — Todas as Manutenções",
+                colunas: ["#", "Loja", "Total", "Concluídas", "Em Aberto", "Gasto Total (R$)", "Gasto Médio (R$)"],
+                dados: ranking.map(([loja, d], i) => [
+                    i + 1, loja, d.total, d.concluidas, d.abertas,
+                    d.custo.toFixed(2).replace(".", ","),
+                    (d.total ? d.custo / d.total : 0).toFixed(2).replace(".", ",")
+                ])
+            };
+            _mostrarBotoesExport();
             const maxCusto = ranking[0]?.[1].custo || 1;
             const rows = ranking.map(([loja, d], i) => {
                 const pct = Math.round((d.custo / maxCusto) * 100);
@@ -1907,3 +1943,65 @@ if (api.isLogado()) {
         apply(next);
     });
 })();
+
+// ─── Exportação de Relatórios ─────────────────────────────────────────────────
+function _mostrarBotoesExport() {
+    const el = document.getElementById("botoesExport");
+    if (el) el.style.display = "flex";
+}
+function _esconderBotoesExport() {
+    const el = document.getElementById("botoesExport");
+    if (el) el.style.display = "none";
+}
+
+function exportarExcel() {
+    if (!_relatorioAtual.dados.length) return;
+    const wb = XLSX.utils.book_new();
+    const wsData = [_relatorioAtual.colunas, ..._relatorioAtual.dados];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Largura automática das colunas
+    const colWidths = _relatorioAtual.colunas.map((col, i) => {
+        const maxLen = Math.max(
+            col.length,
+            ..._relatorioAtual.dados.map(r => String(r[i] || "").length)
+        );
+        return { wch: Math.min(maxLen + 4, 50) };
+    });
+    ws["!cols"] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, "Relatório");
+    const nomeArquivo = `${_relatorioAtual.titulo.replace(/[^a-zA-Z0-9À-ú\s]/g, "").trim()}.xlsx`;
+    XLSX.writeFile(wb, nomeArquivo);
+}
+
+function exportarPDF() {
+    if (!_relatorioAtual.dados.length) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+    // Cabeçalho
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(_relatorioAtual.titulo, 14, 16);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 14, 23);
+    doc.setTextColor(0);
+
+    // Tabela
+    doc.autoTable({
+        startY: 28,
+        head: [_relatorioAtual.colunas],
+        body: _relatorioAtual.dados,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: "bold" },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        margin: { left: 14, right: 14 },
+    });
+
+    const nomeArquivo = `${_relatorioAtual.titulo.replace(/[^a-zA-Z0-9À-ú\s]/g, "").trim()}.pdf`;
+    doc.save(nomeArquivo);
+}
