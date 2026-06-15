@@ -111,6 +111,7 @@ export function criarResposta(manutencaoId, dados)  {
 }
 
 export function listarUsuarios()        { return apiFetch("/usuarios"); }
+export function getLogAcessos(id)       { return apiFetch(`/usuarios/${id}/acessos`); }
 export function criarUsuario(data)      { return apiFetch("/usuarios",        { method: "POST",   body: JSON.stringify(data) }); }
 export function editarUsuario(id, data) { return apiFetch(`/usuarios/${id}`,  { method: "PUT",    body: JSON.stringify(data) }); }
 export function excluirUsuario(id)      { return apiFetch(`/usuarios/${id}`,  { method: "DELETE" }); }

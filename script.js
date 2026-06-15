@@ -155,6 +155,8 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ─── Modais ────────────────────────────────────────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add("active"); }
 function closeModal(id) {
+window.openModal = openModal;
+window.closeModal = closeModal;
     document.getElementById(id).classList.remove("active");
     if (id === "modalManutencao" || id === "modalManutencaoSimples") {
         eqChatParar();
