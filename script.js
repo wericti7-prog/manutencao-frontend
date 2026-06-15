@@ -1246,6 +1246,7 @@ async function loadUsuarios() {
                 <td>${formatDate(u.criado_em)}</td>
                 <td>${u.ultimo_acesso ? formatDateTime(u.ultimo_acesso) : '<span style="color:var(--text-secondary);font-size:.82rem">Nunca</span>'}</td>
                 <td><button class="btn-icon btn-edit" onclick="editarUsuario(${u.id}, '${esc(u.nome)}', '${esc(u.username)}', '${esc(u.role)}')" title="Editar">✏️</button>
+                    <button class="btn-icon" onclick="verLogAcessos(${u.id}, '${esc(u.nome)}')" title="Histórico de logins" style="background:none;border:none;cursor:pointer;font-size:1.1rem">🕐</button>
                     <button class="btn-icon btn-delete" onclick="removeUsuario(${u.id}, '${esc(u.username)}')">🗑️</button></td>
             </tr>`).join("");
         document.getElementById("listaUsuarios").innerHTML = `
@@ -1255,6 +1256,32 @@ async function loadUsuarios() {
             </table>`;
     } catch (err) { showError(err.message); }
 }
+
+window.verLogAcessos = async function(id, nome) {
+    const corpo = document.getElementById("logAcessosCorpo");
+    const titulo = document.getElementById("logAcessosTitulo");
+    titulo.textContent = `Histórico de logins — ${nome}`;
+    corpo.innerHTML = `<p style="color:var(--text-secondary)">Carregando...</p>`;
+    openModal("modalLogAcessos");
+    try {
+        const logs = await api.getLogAcessos(id);
+        if (!logs.length) {
+            corpo.innerHTML = `<p style="color:var(--text-secondary)">Nenhum login registrado ainda.</p>`;
+            return;
+        }
+        corpo.innerHTML = `
+            <table>
+                <thead><tr><th>#</th><th>Data/Hora</th></tr></thead>
+                <tbody>
+                    ${logs.map((l, i) => `
+                        <tr>
+                            <td style="color:var(--text-secondary);width:40px">${i + 1}º</td>
+                            <td>${formatDateTime(l.acessado_em)}</td>
+                        </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch (err) { corpo.innerHTML = `<p style="color:var(--danger)">${err.message}</p>`; }
+};
 
 window.removeUsuario = async function(id, username) {
     if (!confirm(`Remover o usuário "${username}"?`)) return;
