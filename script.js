@@ -240,7 +240,21 @@ async function loadManutencoes() {
             const badgeSubstituto = m.substituto && !["manutencao","observador"].includes(userRole)
                 ? `<span class="badge-substituto" title="Substituto: ${esc(m.substituto)}">🔄</span>`
                 : "";
-            return `<tr>
+            // Badge de prazo
+            let badgePrazo = "";
+            if (m.prazo && !["Concluída","Cancelada"].includes(m.status)) {
+                const agora = new Date();
+                const prazoDate = new Date(m.prazo);
+                const diffH = (prazoDate - agora) / 36e5;
+                if (diffH < 0) {
+                    badgePrazo = `<span class="badge-prazo vencido" title="Prazo vencido em ${formatDateTime(m.prazo)}">⚠️ Vencido</span>`;
+                } else if (diffH < 24) {
+                    badgePrazo = `<span class="badge-prazo urgente" title="Prazo: ${formatDateTime(m.prazo)}">🔴 Vence hoje</span>`;
+                } else if (diffH < 48) {
+                    badgePrazo = `<span class="badge-prazo alerta" title="Prazo: ${formatDateTime(m.prazo)}">🟡 Vence amanhã</span>`;
+                }
+            }
+            return `<tr${m.prazo && new Date(m.prazo) < new Date() && !["Concluída","Cancelada"].includes(m.status) ? ' class="linha-vencida"' : ''}>
                 <td><span class="id-badge">${esc(m.numero)}</span></td>
                 <td>
                     <button class="link-equipamento" onclick="verDetalhes(${m.id})">${esc(m.equipamento)}</button>
@@ -249,7 +263,7 @@ async function loadManutencoes() {
                 <td>${m.localizacao || "-"}</td>
                 <td>${m.tecnico || "-"}</td>
                 <td class="problema-cell">${(m.problema || "-").substring(0,60)}${(m.problema||"").length>60?"…":""}</td>
-                <td><span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span></td>
+                <td><span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span>${badgePrazo}</td>
                 <td>${formatCurrency(m.custo)}</td>
                 <td><div class="action-buttons">${acoes}</div></td>
             </tr>`;
@@ -283,6 +297,12 @@ document.getElementById("btnNovaManutencao").addEventListener("click", () => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById("manutencaoDataInicio").value = now.toISOString().slice(0,16);
+    const _prazoNovo = document.getElementById("manutencaoPrazo");
+    if (_prazoNovo) {
+        _prazoNovo.value = "";
+        const _podePrazoNovo = ["gerencia","admin","tecnico"].includes(api.getUsuarioLogado()?.role || "");
+        _prazoNovo.disabled = !_podePrazoNovo;
+    }
     populateDatalist();
     openModal("modalManutencao");
     // Nova manutenção: limpa área de anexos
@@ -309,6 +329,7 @@ async function salvarManutencao(finalizar, resultadoReparo) {
         substituto:  document.getElementById("manutencaoSubstituto")?.value.trim() || null,
         data_inicio: document.getElementById("manutencaoDataInicio").value || null,
         data_fim:    document.getElementById("manutencaoDataFim").value    || null,
+        prazo:       document.getElementById("manutencaoPrazo")?.value     || null,
     };
 
     try {
@@ -376,6 +397,15 @@ window.editManutencao = async function(id) {
             _subEl.value = m.substituto || "";
             const _grp = _subEl.closest(".form-group");
             if (_grp) _grp.style.display = ["manutencao","observador"].includes(userRole) ? "none" : "";
+        }
+        // Campo prazo — só gerência e técnico podem editar
+        const _prazoEl = document.getElementById("manutencaoPrazo");
+        if (_prazoEl) {
+            _prazoEl.value = m.prazo?.slice(0,16) || "";
+            const _podePrazo = ["gerencia","admin","tecnico"].includes(userRole);
+            _prazoEl.disabled = !_podePrazo;
+            const _grpPrazo = document.getElementById("grpPrazo");
+            if (_grpPrazo) _grpPrazo.title = _podePrazo ? "" : "Apenas gerência e técnico podem definir o prazo";
         }
         document.getElementById("modalManutencaoTitle").textContent = `Editar Manutenção #${esc(m.numero)}`;
         document.getElementById("btnFinalizar").style.display = "inline-flex";
