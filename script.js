@@ -204,14 +204,15 @@ async function loadManutencoes() {
 
         let lista = await api.listarManutencoes(params);
 
-        // Filtro local por número do chamado, equipamento, técnico ou problema
+        // Filtro local por número do chamado, equipamento, técnico, problema ou localização
         if (search) {
             const s = search.toLowerCase();
             lista = lista.filter(m =>
                 (m.numero      || "").toString().toLowerCase().includes(s) ||
                 (m.equipamento || "").toLowerCase().includes(s) ||
                 (m.tecnico     || "").toLowerCase().includes(s) ||
-                (m.problema    || "").toLowerCase().includes(s)
+                (m.problema    || "").toLowerCase().includes(s) ||
+                (m.localizacao || "").toLowerCase().includes(s)
             );
         }
 
