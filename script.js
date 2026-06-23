@@ -248,11 +248,11 @@ async function loadManutencoes() {
                 const prazoDate = new Date(m.prazo);
                 const diffH = (prazoDate - agora) / 36e5;
                 if (diffH < 0) {
-                    badgePrazo = `<span class="badge-prazo vencido" title="Prazo vencido em ${formatDateTime(m.prazo)}">⚠️ Vencido</span>`;
+                    badgePrazo = `<span class="badge-prazo vencido" title="Prazo vencido em ${formatDateTime(m.prazo)}"></span>`;
                 } else if (diffH < 24) {
-                    badgePrazo = `<span class="badge-prazo urgente" title="Prazo: ${formatDateTime(m.prazo)}">🔴 Vence hoje</span>`;
+                    badgePrazo = `<span class="badge-prazo urgente" title="Vence hoje — ${formatDateTime(m.prazo)}"></span>`;
                 } else if (diffH < 48) {
-                    badgePrazo = `<span class="badge-prazo alerta" title="Prazo: ${formatDateTime(m.prazo)}">🟡 Vence amanhã</span>`;
+                    badgePrazo = `<span class="badge-prazo alerta" title="Vence amanhã — ${formatDateTime(m.prazo)}"></span>`;
                 }
             }
             return `<tr${m.prazo && new Date(m.prazo) < new Date() && !["Concluída","Cancelada"].includes(m.status) ? ' class="linha-vencida"' : ''}>
