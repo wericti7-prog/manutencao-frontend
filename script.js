@@ -290,6 +290,7 @@ async function loadManutencoes() {
 document.getElementById("btnNovaManutencao").addEventListener("click", () => {
     document.getElementById("formManutencao").reset();
     document.getElementById("manutencaoId").value = "";
+    document.getElementById("manutencaoStatus").value = "Em Manutenção";
     const prox = "---";
     document.getElementById("manutencaoNumero").value = prox + " (novo)";
     document.getElementById("modalManutencaoTitle").textContent = "Nova Manutenção";
