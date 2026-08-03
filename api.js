@@ -119,5 +119,10 @@ export function excluirUsuario(id)      { return apiFetch(`/usuarios/${id}`,  { 
 export function listarLixeira()         { return apiFetch("/lixeira"); }
 export function restaurarManutencao(id) { return apiFetch(`/lixeira/${id}/restaurar`, { method: "POST" }); }
 
+export function listarAguardandoColeta()     { return apiFetch("/aguardando-coleta"); }
+export function criarAguardandoColeta(dados) { return apiFetch("/aguardando-coleta", { method: "POST", body: JSON.stringify(dados) }); }
+export function excluirAguardandoColeta(id)  { return apiFetch(`/aguardando-coleta/${id}`, { method: "DELETE" }); }
+export function enviarParaManutencao(id)     { return apiFetch(`/aguardando-coleta/${id}/enviar`, { method: "POST" }); }
+
 export function listarChat(desdeId = 0)  { return apiFetch(`/chat?desde_id=${desdeId}`); }
 export function enviarChat(dados)        { return apiFetch("/chat", { method: "POST", body: JSON.stringify(dados) }); }

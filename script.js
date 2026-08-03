@@ -62,6 +62,10 @@ function mostrarApp() {
     const menuLixeira = document.getElementById("menuLixeira");
     if (menuLixeira) menuLixeira.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
 
+    // Aba Aguardando Coleta: visível para técnicos e gerência/admin
+    const menuAguardandoColeta = document.getElementById("menuAguardandoColeta");
+    if (menuAguardandoColeta) menuAguardandoColeta.style.display = ["tecnico","gerencia","admin"].includes(u.role) ? "block" : "none";
+
     // Aba Relatórios: visível somente para gerencia/admin
     const menuRelatorios = document.querySelector(".tab-btn[data-tab='relatorios']");
     if (menuRelatorios) menuRelatorios.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
@@ -148,6 +152,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
         if (tab === "relatorios")  loadRelatorios();
         if (tab === "usuarios")    loadUsuarios();
         if (tab === "lixeira")     loadLixeira();
+        if (tab === "aguardandoColeta") loadAguardandoColeta();
         updateStats();
     });
 });
@@ -1624,6 +1629,75 @@ window.restaurarChamado = async function(id) {
         await api.restaurarManutencao(id);
         loadLixeira();
         updateStats();
+    } catch (err) { showError(err.message); }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGUARDANDO COLETA — Equipamentos parados na sala esperando envio à manutenção
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadAguardandoColeta() {
+    const el = document.getElementById("listaAguardandoColeta");
+    if (!el) return;
+    el.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
+    try {
+        const lista = await api.listarAguardandoColeta();
+        if (!lista.length) {
+            el.innerHTML = `<div class="empty-state"><h3>Nenhum equipamento aguardando coleta</h3><p>Tudo já foi enviado para manutenção.</p></div>`;
+            return;
+        }
+        const rows = lista.map(item => `<tr>
+            <td>${esc(item.equipamento)}</td>
+            <td>${item.localizacao || "-"}</td>
+            <td>${item.criado_por || "-"}</td>
+            <td style="font-size:.85rem;color:var(--text-secondary)">${formatDateTime(item.criado_em)}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon btn-edit" title="Enviar para Manutenção" onclick="enviarParaManutencaoItem(${item.id})">🔧</button>
+                    <button class="btn-icon btn-delete" title="Excluir" onclick="excluirAguardandoColetaItem(${item.id})">🗑️</button>
+                </div>
+            </td>
+        </tr>`).join("");
+        el.innerHTML = `<table>
+            <thead><tr>
+                <th>Equipamento</th><th>Localização</th><th>Adicionado por</th><th>Data</th><th>Ações</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch (err) { showError(err.message); }
+}
+
+document.getElementById("btnNovoAguardandoColeta")?.addEventListener("click", () => {
+    document.getElementById("formAguardandoColeta").reset();
+    openModal("modalAguardandoColeta");
+});
+
+document.getElementById("formAguardandoColeta")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const dados = {
+        equipamento: document.getElementById("aguardandoEquipamento").value.trim(),
+        localizacao: document.getElementById("aguardandoLocalizacao").value || null,
+    };
+    try {
+        await api.criarAguardandoColeta(dados);
+        closeModal("modalAguardandoColeta");
+        loadAguardandoColeta();
+    } catch (err) { showError(err.message); }
+});
+
+window.enviarParaManutencaoItem = async function(id) {
+    if (!confirm("Enviar este equipamento para manutenção? Isso criará um novo chamado e removerá o item desta lista.")) return;
+    try {
+        await api.enviarParaManutencao(id);
+        loadAguardandoColeta();
+        updateStats();
+    } catch (err) { showError(err.message); }
+};
+
+window.excluirAguardandoColetaItem = async function(id) {
+    if (!confirm("Excluir este equipamento da lista de aguardando coleta?")) return;
+    try {
+        await api.excluirAguardandoColeta(id);
+        loadAguardandoColeta();
     } catch (err) { showError(err.message); }
 };
 
