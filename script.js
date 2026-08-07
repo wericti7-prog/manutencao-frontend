@@ -66,6 +66,10 @@ function mostrarApp() {
     const menuAguardandoColeta = document.getElementById("menuAguardandoColeta");
     if (menuAguardandoColeta) menuAguardandoColeta.style.display = ["tecnico","gerencia","admin"].includes(u.role) ? "block" : "none";
 
+    // Aba Estoque: visível para técnicos e gerência/admin
+    const menuEstoque = document.getElementById("menuEstoque");
+    if (menuEstoque) menuEstoque.style.display = ["tecnico","gerencia","admin"].includes(u.role) ? "block" : "none";
+
     // Aba Relatórios: visível somente para gerencia/admin
     const menuRelatorios = document.querySelector(".tab-btn[data-tab='relatorios']");
     if (menuRelatorios) menuRelatorios.style.display = ["gerencia","admin"].includes(u.role) ? "block" : "none";
@@ -153,6 +157,7 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
         if (tab === "usuarios")    loadUsuarios();
         if (tab === "lixeira")     loadLixeira();
         if (tab === "aguardandoColeta") loadAguardandoColeta();
+        if (tab === "estoque") loadEstoque();
         updateStats();
     });
 });
@@ -1700,6 +1705,192 @@ window.excluirAguardandoColetaItem = async function(id) {
         await api.excluirAguardandoColeta(id);
         loadAguardandoColeta();
     } catch (err) { showError(err.message); }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ESTOQUE
+// ═══════════════════════════════════════════════════════════════════════════════
+let _estoqueCache = [];
+
+async function loadEstoque() {
+    const el = document.getElementById("listaEstoque");
+    if (!el) return;
+    el.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
+    try {
+        const busca      = document.getElementById("searchEstoque")?.value.trim() || "";
+        const categoria   = document.getElementById("filterCategoriaEstoque")?.value || "";
+        const lista = await api.listarEstoque({ busca, categoria });
+        _estoqueCache = lista;
+        _atualizarFiltroCategorias(lista);
+        renderEstoque(lista);
+    } catch (err) { showError(err.message); }
+}
+
+function _atualizarFiltroCategorias(lista) {
+    const sel = document.getElementById("filterCategoriaEstoque");
+    if (!sel) return;
+    const atual = sel.value;
+    const categorias = [...new Set(lista.map(i => i.categoria).filter(Boolean))].sort();
+    sel.innerHTML = `<option value="">Todas as Categorias</option>` +
+        categorias.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+    sel.value = atual;
+}
+
+function renderEstoque(lista) {
+    const el = document.getElementById("listaEstoque");
+    if (!lista.length) {
+        el.innerHTML = `<div class="empty-state"><h3>Nenhum item no estoque</h3><p>Cadastre o primeiro item para começar.</p></div>`;
+        return;
+    }
+    const rows = lista.map(item => {
+        const baixo = item.quantidade <= item.estoque_minimo;
+        const badgeClass = item.quantidade === 0 ? "badge-danger" : (baixo ? "badge-warning" : "badge-success");
+        const badgeLabel  = item.quantidade === 0 ? "Sem estoque" : (baixo ? "Estoque baixo" : "OK");
+        return `<tr>
+            <td><strong>${esc(item.nome)}</strong></td>
+            <td>${item.categoria ? esc(item.categoria) : "-"}</td>
+            <td>${item.quantidade} ${esc(item.unidade || "un")}</td>
+            <td>${item.estoque_minimo}</td>
+            <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon" title="Entrada" style="background:none;border:none;cursor:pointer;font-size:1.1rem" onclick="abrirMovimentoEstoque(${item.id}, 'entrada')">⬆️</button>
+                    <button class="btn-icon" title="Saída" style="background:none;border:none;cursor:pointer;font-size:1.1rem" onclick="abrirMovimentoEstoque(${item.id}, 'saida')">⬇️</button>
+                    <button class="btn-icon" title="Histórico" style="background:none;border:none;cursor:pointer;font-size:1.1rem" onclick="verHistoricoEstoque(${item.id})">🕐</button>
+                    <button class="btn-icon btn-edit" title="Editar" onclick="editarItemEstoqueModal(${item.id})">✏️</button>
+                    <button class="btn-icon btn-delete" title="Excluir" onclick="excluirItemEstoqueItem(${item.id})">🗑️</button>
+                </div>
+            </td>
+        </tr>`;
+    }).join("");
+    el.innerHTML = `<table>
+        <thead><tr>
+            <th>Item</th><th>Categoria</th><th>Quantidade</th><th>Mínimo</th><th>Situação</th><th>Ações</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+    </table>`;
+}
+
+document.getElementById("searchEstoque")?.addEventListener("input", () => loadEstoque());
+document.getElementById("filterCategoriaEstoque")?.addEventListener("change", () => loadEstoque());
+
+document.getElementById("btnNovoItemEstoque")?.addEventListener("click", () => {
+    document.getElementById("formEstoqueItem").reset();
+    document.getElementById("estoqueItemId").value = "";
+    document.getElementById("modalEstoqueItemTitulo").textContent = "Novo Item de Estoque";
+    document.getElementById("estoqueUnidade").value = "un";
+    document.getElementById("estoqueQuantidadeGroup").style.display = "block";
+    openModal("modalEstoqueItem");
+});
+
+window.editarItemEstoqueModal = function(id) {
+    const item = _estoqueCache.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById("formEstoqueItem").reset();
+    document.getElementById("estoqueItemId").value    = item.id;
+    document.getElementById("modalEstoqueItemTitulo").textContent = "Editar Item de Estoque";
+    document.getElementById("estoqueNome").value       = item.nome;
+    document.getElementById("estoqueCategoria").value  = item.categoria || "";
+    document.getElementById("estoqueUnidade").value    = item.unidade || "un";
+    document.getElementById("estoqueMinimo").value     = item.estoque_minimo;
+    // Quantidade só é definida na criação; edições usam entrada/saída
+    document.getElementById("estoqueQuantidadeGroup").style.display = "none";
+    openModal("modalEstoqueItem");
+};
+
+document.getElementById("formEstoqueItem")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = document.getElementById("estoqueItemId").value;
+    try {
+        if (id) {
+            const dados = {
+                nome:           document.getElementById("estoqueNome").value.trim(),
+                categoria:      document.getElementById("estoqueCategoria").value.trim() || null,
+                unidade:        document.getElementById("estoqueUnidade").value.trim() || "un",
+                estoque_minimo: parseInt(document.getElementById("estoqueMinimo").value) || 0,
+            };
+            await api.editarItemEstoque(id, dados);
+        } else {
+            const dados = {
+                nome:           document.getElementById("estoqueNome").value.trim(),
+                categoria:      document.getElementById("estoqueCategoria").value.trim() || null,
+                unidade:        document.getElementById("estoqueUnidade").value.trim() || "un",
+                quantidade:     parseInt(document.getElementById("estoqueQuantidade").value) || 0,
+                estoque_minimo: parseInt(document.getElementById("estoqueMinimo").value) || 0,
+            };
+            await api.criarItemEstoque(dados);
+        }
+        closeModal("modalEstoqueItem");
+        loadEstoque();
+    } catch (err) { showError(err.message); }
+});
+
+window.excluirItemEstoqueItem = async function(id) {
+    const item = _estoqueCache.find(i => i.id === id);
+    if (!confirm(`Excluir o item "${item ? item.nome : ""}" do estoque? Isso também apaga o histórico de movimentações dele.`)) return;
+    try {
+        await api.excluirItemEstoque(id);
+        loadEstoque();
+    } catch (err) { showError(err.message); }
+};
+
+window.abrirMovimentoEstoque = function(id, tipo) {
+    const item = _estoqueCache.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById("formEstoqueMovimento").reset();
+    document.getElementById("estoqueMovItemId").value = id;
+    document.getElementById("estoqueMovTipo").value    = tipo;
+    document.getElementById("estoqueMovQuantidade").value = 1;
+    document.getElementById("modalEstoqueMovimentoTitulo").textContent =
+        (tipo === "entrada" ? "⬆️ Entrada — " : "⬇️ Saída — ") + item.nome;
+    document.getElementById("estoqueMovDisponivel").textContent =
+        `Disponível atualmente: ${item.quantidade} ${item.unidade || "un"}`;
+    openModal("modalEstoqueMovimento");
+};
+
+document.getElementById("formEstoqueMovimento")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = document.getElementById("estoqueMovItemId").value;
+    const dados = {
+        tipo:       document.getElementById("estoqueMovTipo").value,
+        quantidade: parseInt(document.getElementById("estoqueMovQuantidade").value),
+        motivo:     document.getElementById("estoqueMovMotivo").value.trim() || null,
+    };
+    try {
+        await api.movimentarEstoque(id, dados);
+        closeModal("modalEstoqueMovimento");
+        loadEstoque();
+    } catch (err) { showError(err.message); }
+});
+
+window.verHistoricoEstoque = async function(id) {
+    const item = _estoqueCache.find(i => i.id === id);
+    const corpo  = document.getElementById("estoqueHistoricoCorpo");
+    const titulo = document.getElementById("estoqueHistoricoTitulo");
+    titulo.textContent = `Histórico — ${item ? item.nome : ""}`;
+    corpo.innerHTML = `<p style="color:var(--text-secondary)">Carregando...</p>`;
+    openModal("modalEstoqueHistorico");
+    try {
+        const movs = await api.historicoEstoque(id);
+        if (!movs.length) {
+            corpo.innerHTML = `<p style="color:var(--text-secondary)">Nenhuma movimentação registrada ainda.</p>`;
+            return;
+        }
+        corpo.innerHTML = `
+            <table>
+                <thead><tr><th>Tipo</th><th>Qtd.</th><th>Motivo</th><th>Usuário</th><th>Data</th></tr></thead>
+                <tbody>
+                    ${movs.map(m => `
+                        <tr>
+                            <td><span class="badge ${m.tipo === "entrada" ? "badge-success" : "badge-danger"}">${m.tipo === "entrada" ? "⬆️ Entrada" : "⬇️ Saída"}</span></td>
+                            <td>${m.quantidade}</td>
+                            <td>${m.motivo ? esc(m.motivo) : "-"}</td>
+                            <td>${esc(m.usuario)}</td>
+                            <td style="font-size:.85rem;color:var(--text-secondary)">${formatDateTime(m.criado_em)}</td>
+                        </tr>`).join("")}
+                </tbody>
+            </table>`;
+    } catch (err) { corpo.innerHTML = `<p style="color:var(--danger)">${err.message}</p>`; }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

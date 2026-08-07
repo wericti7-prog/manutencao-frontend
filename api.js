@@ -126,3 +126,16 @@ export function enviarParaManutencao(id)     { return apiFetch(`/aguardando-cole
 
 export function listarChat(desdeId = 0)  { return apiFetch(`/chat?desde_id=${desdeId}`); }
 export function enviarChat(dados)        { return apiFetch("/chat", { method: "POST", body: JSON.stringify(dados) }); }
+
+// ─── Estoque ───────────────────────────────────────────────────────────────────
+export function listarEstoque(params = {}) {
+    const qs = new URLSearchParams(
+        Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ""))
+    ).toString();
+    return apiFetch("/estoque" + (qs ? "?" + qs : ""));
+}
+export function criarItemEstoque(data)     { return apiFetch("/estoque",       { method: "POST",   body: JSON.stringify(data) }); }
+export function editarItemEstoque(id, d)   { return apiFetch(`/estoque/${id}`, { method: "PUT",    body: JSON.stringify(d) }); }
+export function excluirItemEstoque(id)     { return apiFetch(`/estoque/${id}`, { method: "DELETE" }); }
+export function movimentarEstoque(id, d)   { return apiFetch(`/estoque/${id}/movimentar`, { method: "POST", body: JSON.stringify(d) }); }
+export function historicoEstoque(id)       { return apiFetch(`/estoque/${id}/movimentos`); }
