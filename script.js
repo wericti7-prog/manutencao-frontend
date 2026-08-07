@@ -1746,7 +1746,11 @@ function renderEstoque(lista) {
         const baixo = item.quantidade <= item.estoque_minimo;
         const badgeClass = item.quantidade === 0 ? "badge-danger" : (baixo ? "badge-warning" : "badge-success");
         const badgeLabel  = item.quantidade === 0 ? "Sem estoque" : (baixo ? "Estoque baixo" : "OK");
+        const foto = item.foto
+            ? `<img src="${item.foto}" alt="${esc(item.nome)}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;border:1px solid var(--border-color);cursor:pointer;" onclick="verFotoEstoqueAmpliada('${encodeURIComponent(item.foto)}','${encodeURIComponent(item.nome)}')">`
+            : `<div style="width:40px;height:40px;border-radius:6px;background:var(--bg-secondary,#f0f0f0);border:1px solid var(--border-color);display:flex;align-items:center;justify-content:center;font-size:1.1rem;">🧰</div>`;
         return `<tr>
+            <td>${foto}</td>
             <td><strong>${esc(item.nome)}</strong></td>
             <td>${item.categoria ? esc(item.categoria) : "-"}</td>
             <td>${item.quantidade} ${esc(item.unidade || "un")}</td>
@@ -1756,7 +1760,6 @@ function renderEstoque(lista) {
                 <div class="action-buttons">
                     <button class="btn-icon" title="Entrada" style="background:none;border:none;cursor:pointer;font-size:1.1rem" onclick="abrirMovimentoEstoque(${item.id}, 'entrada')">⬆️</button>
                     <button class="btn-icon" title="Saída" style="background:none;border:none;cursor:pointer;font-size:1.1rem" onclick="abrirMovimentoEstoque(${item.id}, 'saida')">⬇️</button>
-                    <button class="btn-icon" title="Histórico" style="background:none;border:none;cursor:pointer;font-size:1.1rem" onclick="verHistoricoEstoque(${item.id})">🕐</button>
                     <button class="btn-icon btn-edit" title="Editar" onclick="editarItemEstoqueModal(${item.id})">✏️</button>
                     <button class="btn-icon btn-delete" title="Excluir" onclick="excluirItemEstoqueItem(${item.id})">🗑️</button>
                 </div>
@@ -1765,11 +1768,23 @@ function renderEstoque(lista) {
     }).join("");
     el.innerHTML = `<table>
         <thead><tr>
-            <th>Item</th><th>Categoria</th><th>Quantidade</th><th>Mínimo</th><th>Situação</th><th>Ações</th>
+            <th>Foto</th><th>Item</th><th>Categoria</th><th>Quantidade</th><th>Mínimo</th><th>Situação</th><th>Ações</th>
         </tr></thead>
         <tbody>${rows}</tbody>
     </table>`;
 }
+
+window.verFotoEstoqueAmpliada = function(fotoEncoded, nome) {
+    const foto = decodeURIComponent(fotoEncoded);
+    document.getElementById("modalAnexoNome").textContent  = decodeURIComponent(nome);
+    document.getElementById("modalAnexoIcone").textContent = "🧰";
+    document.getElementById("modalAnexoBody").innerHTML = `<img src="${foto}" alt="${decodeURIComponent(nome)}" class="modal-anexo-img">`;
+    document.getElementById("btnModalAnexoBaixar").onclick = () => {
+        const a = document.createElement("a");
+        a.href = foto; a.download = decodeURIComponent(nome); a.click();
+    };
+    openModal("modalAnexo");
+};
 
 document.getElementById("searchEstoque")?.addEventListener("input", () => loadEstoque());
 document.getElementById("filterCategoriaEstoque")?.addEventListener("change", () => loadEstoque());
@@ -1780,7 +1795,29 @@ document.getElementById("btnNovoItemEstoque")?.addEventListener("click", () => {
     document.getElementById("modalEstoqueItemTitulo").textContent = "Novo Item de Estoque";
     document.getElementById("estoqueUnidade").value = "un";
     document.getElementById("estoqueQuantidadeGroup").style.display = "block";
+    document.getElementById("estoqueFoto").value = "";
+    document.getElementById("estoqueFotoPreviewWrap").style.display = "none";
     openModal("modalEstoqueItem");
+});
+
+document.getElementById("estoqueFotoInput")?.addEventListener("change", async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { showError("Selecione um arquivo de imagem."); e.target.value = ""; return; }
+    const base64 = await new Promise(res => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.readAsDataURL(file);
+    });
+    document.getElementById("estoqueFoto").value = base64;
+    document.getElementById("estoqueFotoPreview").src = base64;
+    document.getElementById("estoqueFotoPreviewWrap").style.display = "flex";
+});
+
+document.getElementById("btnRemoverFotoEstoque")?.addEventListener("click", () => {
+    document.getElementById("estoqueFoto").value = "";
+    document.getElementById("estoqueFotoInput").value = "";
+    document.getElementById("estoqueFotoPreviewWrap").style.display = "none";
 });
 
 window.editarItemEstoqueModal = function(id) {
@@ -1795,6 +1832,15 @@ window.editarItemEstoqueModal = function(id) {
     document.getElementById("estoqueMinimo").value     = item.estoque_minimo;
     // Quantidade só é definida na criação; edições usam entrada/saída
     document.getElementById("estoqueQuantidadeGroup").style.display = "none";
+    document.getElementById("estoqueFotoInput").value = "";
+    if (item.foto) {
+        document.getElementById("estoqueFoto").value = item.foto;
+        document.getElementById("estoqueFotoPreview").src = item.foto;
+        document.getElementById("estoqueFotoPreviewWrap").style.display = "flex";
+    } else {
+        document.getElementById("estoqueFoto").value = "";
+        document.getElementById("estoqueFotoPreviewWrap").style.display = "none";
+    }
     openModal("modalEstoqueItem");
 };
 
@@ -1808,6 +1854,7 @@ document.getElementById("formEstoqueItem")?.addEventListener("submit", async e =
                 categoria:      document.getElementById("estoqueCategoria").value.trim() || null,
                 unidade:        document.getElementById("estoqueUnidade").value.trim() || "un",
                 estoque_minimo: parseInt(document.getElementById("estoqueMinimo").value) || 0,
+                foto:           document.getElementById("estoqueFoto").value || null,
             };
             await api.editarItemEstoque(id, dados);
         } else {
@@ -1817,6 +1864,7 @@ document.getElementById("formEstoqueItem")?.addEventListener("submit", async e =
                 unidade:        document.getElementById("estoqueUnidade").value.trim() || "un",
                 quantidade:     parseInt(document.getElementById("estoqueQuantidade").value) || 0,
                 estoque_minimo: parseInt(document.getElementById("estoqueMinimo").value) || 0,
+                foto:           document.getElementById("estoqueFoto").value || null,
             };
             await api.criarItemEstoque(dados);
         }
@@ -1863,25 +1911,44 @@ document.getElementById("formEstoqueMovimento")?.addEventListener("submit", asyn
     } catch (err) { showError(err.message); }
 });
 
-window.verHistoricoEstoque = async function(id) {
-    const item = _estoqueCache.find(i => i.id === id);
-    const corpo  = document.getElementById("estoqueHistoricoCorpo");
+document.getElementById("btnHistoricoEstoqueGeral")?.addEventListener("click", () => abrirHistoricoEstoqueGeral());
+
+window.abrirHistoricoEstoqueGeral = async function(itemIdPreSelecionado = "") {
     const titulo = document.getElementById("estoqueHistoricoTitulo");
-    titulo.textContent = `Histórico — ${item ? item.nome : ""}`;
-    corpo.innerHTML = `<p style="color:var(--text-secondary)">Carregando...</p>`;
+    const sel    = document.getElementById("estoqueHistoricoFiltroItem");
+    titulo.textContent = "Histórico de Movimentações";
+
+    // Popula o filtro de equipamentos a partir do cache atual (carrega se necessário)
+    if (!_estoqueCache.length) {
+        try { _estoqueCache = await api.listarEstoque({}); } catch {}
+    }
+    sel.innerHTML = `<option value="">Todos os equipamentos</option>` +
+        _estoqueCache.map(i => `<option value="${i.id}">${esc(i.nome)}</option>`).join("");
+    sel.value = itemIdPreSelecionado || "";
+
     openModal("modalEstoqueHistorico");
+    await _carregarHistoricoEstoqueGeral();
+};
+
+document.getElementById("estoqueHistoricoFiltroItem")?.addEventListener("change", () => _carregarHistoricoEstoqueGeral());
+
+async function _carregarHistoricoEstoqueGeral() {
+    const corpo = document.getElementById("estoqueHistoricoCorpo");
+    const itemId = document.getElementById("estoqueHistoricoFiltroItem")?.value || null;
+    corpo.innerHTML = `<p style="color:var(--text-secondary)">Carregando...</p>`;
     try {
-        const movs = await api.historicoEstoque(id);
+        const movs = await api.historicoEstoqueGeral(itemId);
         if (!movs.length) {
             corpo.innerHTML = `<p style="color:var(--text-secondary)">Nenhuma movimentação registrada ainda.</p>`;
             return;
         }
         corpo.innerHTML = `
             <table>
-                <thead><tr><th>Tipo</th><th>Qtd.</th><th>Motivo</th><th>Usuário</th><th>Data</th></tr></thead>
+                <thead><tr><th>Equipamento</th><th>Tipo</th><th>Qtd.</th><th>Motivo</th><th>Usuário</th><th>Data</th></tr></thead>
                 <tbody>
                     ${movs.map(m => `
                         <tr>
+                            <td>${esc(m.item_nome || "-")}</td>
                             <td><span class="badge ${m.tipo === "entrada" ? "badge-success" : "badge-danger"}">${m.tipo === "entrada" ? "⬆️ Entrada" : "⬇️ Saída"}</span></td>
                             <td>${m.quantidade}</td>
                             <td>${m.motivo ? esc(m.motivo) : "-"}</td>
@@ -1891,7 +1958,7 @@ window.verHistoricoEstoque = async function(id) {
                 </tbody>
             </table>`;
     } catch (err) { corpo.innerHTML = `<p style="color:var(--danger)">${err.message}</p>`; }
-};
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CHAT GLOBAL — Widget flutuante no canto inferior direito

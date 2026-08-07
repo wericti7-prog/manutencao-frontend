@@ -450,7 +450,10 @@
         <div id="estoque" class="tab-content">
             <div class="section-header">
                 <h2>Controle de Estoque</h2>
-                <button class="btn btn-primary" id="btnNovoItemEstoque">➕ Novo Item</button>
+                <div style="display:flex;gap:10px;">
+                    <button class="btn btn-secondary" id="btnHistoricoEstoqueGeral">🕐 Histórico</button>
+                    <button class="btn btn-primary" id="btnNovoItemEstoque">➕ Novo Item</button>
+                </div>
             </div>
             <p style="color:var(--text-secondary);margin:-8px 0 16px;font-size:.9rem;">
                 Gerencie peças e equipamentos em estoque: entradas, saídas e níveis mínimos.
@@ -1057,6 +1060,15 @@
                     <label for="estoqueCategoria">Categoria</label>
                     <input type="text" id="estoqueCategoria" class="form-control" placeholder="Ex: Cabos, Periféricos, Peças">
                 </div>
+                <div class="form-group">
+                    <label for="estoqueFotoInput">Foto do Equipamento</label>
+                    <input type="file" id="estoqueFotoInput" class="form-control" accept="image/*">
+                    <input type="hidden" id="estoqueFoto" value="">
+                    <div id="estoqueFotoPreviewWrap" style="margin-top:8px;display:none;align-items:center;gap:10px;">
+                        <img id="estoqueFotoPreview" src="" alt="Prévia" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border-color);">
+                        <button type="button" class="btn btn-secondary" id="btnRemoverFotoEstoque" style="padding:4px 10px;font-size:.8rem;">Remover foto</button>
+                    </div>
+                </div>
                 <div class="form-row" style="display:flex;gap:12px;">
                     <div class="form-group" style="flex:1;">
                         <label for="estoqueUnidade">Unidade</label>
@@ -1113,14 +1125,20 @@
         </div>
     </div>
 
-    <!-- ===== MODAL — Histórico de Movimentações do Item ===== -->
+    <!-- ===== MODAL — Histórico de Movimentações do Estoque ===== -->
     <div id="modalEstoqueHistorico" class="modal">
-        <div class="modal-content" style="max-width:520px;">
+        <div class="modal-content" style="max-width:640px;">
             <div class="modal-header">
                 <h3 id="estoqueHistoricoTitulo">Histórico de Movimentações</h3>
                 <span class="close" data-modal="modalEstoqueHistorico">&times;</span>
             </div>
             <div style="padding:25px;max-height:65vh;overflow-y:auto;">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label for="estoqueHistoricoFiltroItem">Filtrar por equipamento</label>
+                    <select id="estoqueHistoricoFiltroItem" class="form-control">
+                        <option value="">Todos os equipamentos</option>
+                    </select>
+                </div>
                 <div id="estoqueHistoricoCorpo"></div>
             </div>
             <div class="modal-footer">

@@ -139,3 +139,7 @@ export function editarItemEstoque(id, d)   { return apiFetch(`/estoque/${id}`, {
 export function excluirItemEstoque(id)     { return apiFetch(`/estoque/${id}`, { method: "DELETE" }); }
 export function movimentarEstoque(id, d)   { return apiFetch(`/estoque/${id}/movimentar`, { method: "POST", body: JSON.stringify(d) }); }
 export function historicoEstoque(id)       { return apiFetch(`/estoque/${id}/movimentos`); }
+export function historicoEstoqueGeral(itemId = null) {
+    const qs = itemId ? `?item_id=${itemId}` : "";
+    return apiFetch(`/estoque/movimentos${qs}`);
+}
