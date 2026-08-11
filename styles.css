@@ -267,14 +267,40 @@ tfoot td {
 }
 
 /* ---- Imagens de Equipamentos na Tabela ---- */
+/* ULTRA AGRESSIVO - Sobrescreve todos os inline styles */
+img {
+    width: 85px !important;
+    height: 85px !important;
+    max-width: 85px !important;
+    max-height: 85px !important;
+    min-width: 85px !important;
+    min-height: 85px !important;
+}
+
 table td img {
-    max-width: 70px;
-    max-height: 70px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    border-radius: 6px;
-    display: block;
+    width: 85px !important;
+    height: 85px !important;
+    max-width: 85px !important;
+    max-height: 85px !important;
+    min-width: 85px !important;
+    min-height: 85px !important;
+    object-fit: contain !important;
+    border-radius: 6px !important;
+    display: inline-block !important;
+}
+
+table img,
+.table-container img {
+    width: 85px !important;
+    height: 85px !important;
+}
+
+/* Matcher para img com atributos style inline */
+img[style] {
+    width: 85px !important;
+    height: 85px !important;
+    max-width: 85px !important;
+    max-height: 85px !important;
 }
 
 /* ---- Badges ---- */
