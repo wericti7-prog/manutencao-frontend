@@ -1949,7 +1949,7 @@ async function _carregarHistoricoEstoqueGeral() {
                     ${movs.map(m => `
                         <tr>
                             <td>${esc(m.item_nome || "-")}</td>
-                            <td><span class="badge ${m.tipo === "entrada" ? "badge-success" : "badge-danger"}">${m.tipo === "entrada" ? "⬆️ Entrada" : "⬇️ Saída"}</span></td>
+                            <td><span class="badge badge-movimentacao" title="${m.tipo === "entrada" ? "Entrada de Equipamento" : "Saída de Equipamento"}">⇅ ${m.tipo === "entrada" ? "Entrada" : "Saída"}</span></td>
                             <td>${m.quantidade}</td>
                             <td>${m.motivo ? esc(m.motivo) : "-"}</td>
                             <td>${esc(m.usuario)}</td>
@@ -1959,6 +1959,7 @@ async function _carregarHistoricoEstoqueGeral() {
             </table>`;
     } catch (err) { corpo.innerHTML = `<p style="color:var(--danger)">${err.message}</p>`; }
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CHAT GLOBAL — Widget flutuante no canto inferior direito
