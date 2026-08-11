@@ -1890,7 +1890,7 @@ window.abrirMovimentoEstoque = function(id, tipo) {
     document.getElementById("estoqueMovTipo").value    = tipo;
     document.getElementById("estoqueMovQuantidade").value = 1;
     document.getElementById("modalEstoqueMovimentoTitulo").textContent =
-        (tipo === "entrada" ? "⬆️ Entrada — " : "⬇️ Saída — ") + item.nome;
+        (tipo === "entrada" ? "⇅ Entrada — " : "⇅ Saída — ")
     document.getElementById("estoqueMovDisponivel").textContent =
         `Disponível atualmente: ${item.quantidade} ${item.unidade || "un"}`;
     openModal("modalEstoqueMovimento");
