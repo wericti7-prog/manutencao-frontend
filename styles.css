@@ -266,6 +266,17 @@ tfoot td {
     border-bottom: none;
 }
 
+/* ---- Imagens de Equipamentos na Tabela ---- */
+table td img {
+    max-width: 70px;
+    max-height: 70px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 6px;
+    display: block;
+}
+
 /* ---- Badges ---- */
 /* Substitua o bloco .badge existente por este: */
 .badge {
@@ -464,6 +475,7 @@ textarea.form-control { resize: vertical; font-family: inherit; min-height: 54px
     .historico-info-grid { grid-template-columns: 1fr; }
     .modal-footer { flex-wrap: wrap; }
     .modal-footer .btn { flex: 1; justify-content: center; }
+    table td img { max-width: 55px; max-height: 55px; }
 }
 
 /* ---- Notas Fiscais / Anexos ---- */
