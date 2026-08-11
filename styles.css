@@ -293,6 +293,27 @@ table td img[style*="width:40px"] {
 .badge-info      { background-color: #dbeafe; color: #1e40af; }
 .badge-secondary { background-color: #e5e7eb; color: #374151; }
 
+/* Novo badge para movimentação de estoque */
+.badge-movimentacao {
+    background-color: #FFA500 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    padding: 6px 12px !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem !important;
+    cursor: help;
+    transition: all 0.2s;
+}
+
+.badge-movimentacao:hover {
+    background-color: #FF8C00 !important;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(255, 165, 0, 0.4);
+}
+
 /* Novas cores para os status do sistema */
 .badge-operacional      { background-color: #d1fae5; color: #065f46; }      /* Verde - Operacional */
 .badge-em-manutencao    { background-color: #fed7aa; color: #92400e; }      /* Laranja - Em Manutenção */
