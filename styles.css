@@ -186,6 +186,30 @@ body {
 .btn-history { background-color: #7c3aed; color: white; }
 .btn-history:hover { background-color: #6d28d9; }
 
+/* Novo botão de movimentação de estoque */
+.btn-movimentacao-estoque {
+    background-color: #FFA500 !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 7px 10px !important;
+    cursor: pointer !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    transition: all 0.2s !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 40px !important;
+    min-height: 36px !important;
+}
+
+.btn-movimentacao-estoque:hover {
+    background-color: #FF8C00 !important;
+    transform: scale(1.08) !important;
+    box-shadow: 0 2px 8px rgba(255, 165, 0, 0.5) !important;
+}
+
 /* ---- ID Badge ---- */
 .id-badge {
     display: inline-block;

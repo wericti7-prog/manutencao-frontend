@@ -1758,8 +1758,7 @@ function renderEstoque(lista) {
             <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn-icon" title="Entrada" style="background:none;border:none;cursor:pointer;font-size:1.1rem" onclick="abrirMovimentoEstoque(${item.id}, 'entrada')">⬆️</button>
-                    <button class="btn-icon" title="Saída" style="background:none;border:none;cursor:pointer;font-size:1.1rem" onclick="abrirMovimentoEstoque(${item.id}, 'saida')">⬇️</button>
+                    <button class="btn-movimentacao-estoque" title="Entrada/Saída" onclick="abrirMovimentoEstoque(${item.id}, 'entrada')">⇅</button>
                     <button class="btn-icon btn-edit" title="Editar" onclick="editarItemEstoqueModal(${item.id})">✏️</button>
                     <button class="btn-icon btn-delete" title="Excluir" onclick="excluirItemEstoqueItem(${item.id})">🗑️</button>
                 </div>
