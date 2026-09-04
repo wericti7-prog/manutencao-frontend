@@ -68,7 +68,7 @@ function mostrarApp() {
 
     // Aba Estoque: visível para técnicos e gerência/admin
     const menuEstoque = document.getElementById("menuEstoque");
-    if (menuEstoque) menuEstoque.style.display = ["tecnico","gerencia","admin","suprimentos"].includes(u.role) ? "block" : "none";
+    if (menuEstoque) menuEstoque.style.display = ["tecnico","gerencia","admin","observador"].includes(u.role) ? "block" : "none";
 
     // Aba Relatórios: visível somente para gerencia/admin
     const menuRelatorios = document.querySelector(".tab-btn[data-tab='relatorios']");
