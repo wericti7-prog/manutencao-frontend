@@ -66,9 +66,9 @@ function mostrarApp() {
     const menuAguardandoColeta = document.getElementById("menuAguardandoColeta");
     if (menuAguardandoColeta) menuAguardandoColeta.style.display = ["tecnico","gerencia","admin"].includes(u.role) ? "block" : "none";
 
-    // Aba Estoque: visível para técnicos e gerência/admin
+    // Aba Estoque: visível para técnicos, gerência/admin e suprimentos (visualização)
     const menuEstoque = document.getElementById("menuEstoque");
-    if (menuEstoque) menuEstoque.style.display = ["tecnico","gerencia","admin"].includes(u.role) ? "block" : "none";
+    if (menuEstoque) menuEstoque.style.display = ["tecnico","gerencia","admin","suprimentos"].includes(u.role) ? "block" : "none";
 
     // Aba Relatórios: visível somente para gerencia/admin
     const menuRelatorios = document.querySelector(".tab-btn[data-tab='relatorios']");
@@ -77,6 +77,10 @@ function mostrarApp() {
     // Botão Nova Manutenção: oculto para observador e manutencao
     const btnNova = document.getElementById("btnNovaManutencao");
     if (btnNova) btnNova.style.display = ["observador","manutencao"].includes(u.role) ? "none" : "inline-flex";
+
+    // Botão Novo Item de Estoque: oculto para suprimentos (acesso somente leitura)
+    const btnNovoItemEstoque = document.getElementById("btnNovoItemEstoque");
+    if (btnNovoItemEstoque) btnNovoItemEstoque.style.display = u.role === "suprimentos" ? "none" : "inline-flex";
 
     updateStats();
     loadManutencoes();
@@ -1738,6 +1742,7 @@ function _atualizarFiltroCategorias(lista) {
 
 function renderEstoque(lista) {
     const el = document.getElementById("listaEstoque");
+    const somenteVisualizacao = api.getUsuarioLogado()?.role === "suprimentos";
     if (!lista.length) {
         el.innerHTML = `<div class="empty-state"><h3>Nenhum item no estoque</h3><p>Cadastre o primeiro item para começar.</p></div>`;
         return;
@@ -1758,9 +1763,11 @@ function renderEstoque(lista) {
             <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
             <td>
                 <div class="action-buttons">
+                    ${somenteVisualizacao ? "-" : `
                     <button class="btn-movimentacao-estoque" title="Entrada/Saída" onclick="abrirMovimentoEstoque(${item.id}, 'entrada')">⇅</button>
                     <button class="btn-icon btn-edit" title="Editar" onclick="editarItemEstoqueModal(${item.id})">✏️</button>
                     <button class="btn-icon btn-delete" title="Excluir" onclick="excluirItemEstoqueItem(${item.id})">🗑️</button>
+                    `}
                 </div>
             </td>
         </tr>`;
