@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Manutenção de TI - Supermercado</title>
     <link rel="stylesheet" href="styles.css">
-      <link rel="stylesheet" href="calendario.css">
     <link rel="icon" href="favicon.ico">
     <style>
     /* ─── Modal detalhes + chat equipamento ─────────────────── */
@@ -331,7 +330,6 @@
         <nav class="tabs">
             <button class="tab-btn active" data-tab="manutencoes">🔧 Manutenções</button>
             <button class="tab-btn" data-tab="finalizados">✅ Finalizados</button>
-              <button class="tab-btn" data-tab="calendario">📅 Calendário</button>
             <button class="tab-btn" data-tab="relatorios">📊 Relatórios</button>
             <button class="tab-btn" id="menuAguardandoColeta" data-tab="aguardandoColeta" style="display:none">📦 Aguardando Coleta</button>
             <button class="tab-btn" id="menuEstoque" data-tab="estoque" style="display:none">🧰 Estoque</button>
@@ -435,10 +433,6 @@
             </div>
             <div id="listaFinalizados" class="table-container"></div>
         </div>
-          <div id="calendario" class="tab-content">
-      <div class="section-header"><h2>Calendário de Chamados</h2></div>
-      <div id="calendarioCorpo"></div>
-  </div>
 
         <!-- ===== ABA AGUARDANDO COLETA ===== -->
         <div id="aguardandoColeta" class="tab-content">

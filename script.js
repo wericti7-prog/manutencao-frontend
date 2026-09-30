@@ -1,6 +1,5 @@
 // STAGING — importa api.js local desta pasta (staging/api.js)
 import * as api from "./api.js";
-import { loadCalendario } from "./calendario.js";
 
 // ─── Variáveis globais de chat ─────────────────────────────────────────────────
 let _chatUltimoId     = 0;
@@ -159,7 +158,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
         if (tab === "lixeira")     loadLixeira();
         if (tab === "aguardandoColeta") loadAguardandoColeta();
         if (tab === "estoque") loadEstoque();
-        if (tab === "calendario") loadCalendario();
         updateStats();
     });
 });
