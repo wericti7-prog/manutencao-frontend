@@ -1152,56 +1152,56 @@
 
     <!-- ===== MODAL — Calendário de Manutenções ===== -->
     <div id="modalCalendario" class="modal">
-        <div class="modal-content" style="max-width:1400px; max-height:95vh;">
-            <div class="modal-header">
-                <h3>📅 Calendário de Manutenções</h3>
+        <div class="modal-content" style="max-width:1400px; max-height:95vh; display:flex; flex-direction:column;">
+            <div class="modal-header" style="flex-shrink:0;">
+                <h3 style="margin:0; font-size:1.1rem;">📅 Calendário de Manutenções</h3>
                 <span class="close" data-modal="modalCalendario">&times;</span>
             </div>
-            <div style="padding:25px; display:flex; flex-direction:column; gap:20px; max-height:calc(95vh - 120px); overflow-y:auto;">
+            <div style="padding:12px 16px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow-y:auto;">
                 
                 <!-- Controles de navegação -->
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
-                    <button id="btnMesAnterior" class="btn btn-secondary" style="padding:8px 14px;">⬅️ Mês Anterior</button>
-                    <h2 id="calendarioMesAno" style="margin:0; font-size:1.3rem; min-width:200px; text-align:center;"></h2>
-                    <button id="btnProximoMes" class="btn btn-secondary" style="padding:8px 14px;">Próximo Mês ➡️</button>
-                    <button id="btnHoje" class="btn btn-primary" style="padding:8px 14px;">Hoje</button>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                    <button id="btnMesAnterior" class="btn btn-secondary" style="padding:6px 10px; font-size:.9rem;">⬅️ Anterior</button>
+                    <h3 id="calendarioMesAno" style="margin:0; font-size:1.1rem; min-width:150px; text-align:center; flex-shrink:0;"></h3>
+                    <button id="btnProximoMes" class="btn btn-secondary" style="padding:6px 10px; font-size:.9rem;">Próximo ➡️</button>
+                    <button id="btnHoje" class="btn btn-primary" style="padding:6px 10px; font-size:.9rem;">Hoje</button>
                 </div>
 
                 <!-- Legenda de cores -->
-                <div style="display:flex; gap:24px; flex-wrap:wrap; padding:12px; background:rgba(59,99,235,.05); border-radius:8px; border-left:4px solid var(--primary-color);">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div style="width:16px; height:16px; border-radius:4px; background:#3b82f6;"></div>
-                        <span style="font-size:.9rem;">Aberta</span>
+                <div style="display:flex; gap:16px; flex-wrap:wrap; padding:8px; background:rgba(59,99,235,.05); border-radius:6px; border-left:3px solid var(--primary-color); font-size:.85rem;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="width:12px; height:12px; border-radius:3px; background:#3b82f6;"></div>
+                        <span>Aberta</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div style="width:16px; height:16px; border-radius:4px; background:#10b981;"></div>
-                        <span style="font-size:.9rem;">Concluída</span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="width:12px; height:12px; border-radius:3px; background:#10b981;"></div>
+                        <span>Concluída</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div style="width:16px; height:16px; border-radius:4px; background:#f59e0b;"></div>
-                        <span style="font-size:.9rem;">Múltiplas</span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="width:12px; height:12px; border-radius:3px; background:#f59e0b;"></div>
+                        <span>Múltiplas</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <div style="width:16px; height:16px; border-radius:4px; background:#ef4444;"></div>
-                        <span style="font-size:.9rem;">Cancelada</span>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="width:12px; height:12px; border-radius:3px; background:#ef4444;"></div>
+                        <span>Cancelada</span>
                     </div>
                 </div>
 
                 <!-- Calendário -->
-                <div id="calendarioCorpo" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; width:100%;">
+                <div id="calendarioCorpo" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; width:100%; flex:1;">
                     <!-- Dias da semana (cabeçalho) -->
-                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Dom</div>
-                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Seg</div>
-                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Ter</div>
-                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Qua</div>
-                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Qui</div>
-                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Sex</div>
-                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Sáb</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:4px 2px; border-bottom:2px solid var(--border-color); font-size:.85rem;">Dom</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:4px 2px; border-bottom:2px solid var(--border-color); font-size:.85rem;">Seg</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:4px 2px; border-bottom:2px solid var(--border-color); font-size:.85rem;">Ter</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:4px 2px; border-bottom:2px solid var(--border-color); font-size:.85rem;">Qua</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:4px 2px; border-bottom:2px solid var(--border-color); font-size:.85rem;">Qui</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:4px 2px; border-bottom:2px solid var(--border-color); font-size:.85rem;">Sex</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:4px 2px; border-bottom:2px solid var(--border-color); font-size:.85rem;">Sáb</div>
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-modal="modalCalendario">Fechar</button>
+            <div class="modal-footer" style="flex-shrink:0; padding:10px 16px;">
+                <button class="btn btn-secondary" data-modal="modalCalendario" style="font-size:.9rem;">Fechar</button>
             </div>
         </div>
     </div>

@@ -295,15 +295,13 @@ window.abrirCalendario = function() {
 };
 
 // ─── Abrir Detalhes da Manutenção do Calendário ───────────────────────────
-window.abrirDetalhesManutencao = async function(id) {
+window.abrirDetalhesManutencao = function(id) {
     closeModal("modalCalendarioDia");
-    try {
-        const m = await api.getManutencao(id);
-        _simplesManutId = id;
-        await _carregarDetalhesManutencao(id);
-        openModal("modalDetalhes");
-    } catch (err) {
-        showError("Erro ao carregar detalhes: " + err.message);
+    // Usa a função verDetalhes que já está definida em script.js
+    if (typeof verDetalhes === "function") {
+        verDetalhes(id);
+    } else {
+        showError("Erro ao carregar detalhes");
     }
 };
 

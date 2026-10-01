@@ -1547,17 +1547,17 @@ tr.linha-vencida td   { background: rgba(239,68,68,.07) !important; }
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 .calendario-dia {
-    aspect-ratio: 1 / 1;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 8px;
+    border-radius: 6px;
+    padding: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
     background: var(--card-bg);
     position: relative;
-    min-height: 100px;
+    min-height: 0;
+    height: 100%;
 }
 
 .calendario-dia:hover {
@@ -1584,8 +1584,8 @@ tr.linha-vencida td   { background: rgba(239,68,68,.07) !important; }
 
 .calendario-dia-numero {
     font-weight: 600;
-    font-size: 1rem;
-    margin-bottom: 6px;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
     color: var(--text-primary);
 }
 
@@ -1598,20 +1598,20 @@ tr.linha-vencida td   { background: rgba(239,68,68,.07) !important; }
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
     min-height: 0;
     overflow: hidden;
 }
 
 .calendario-manuencao-tag {
-    font-size: 0.75rem;
-    padding: 2px 6px;
-    border-radius: 4px;
+    font-size: 0.65rem;
+    padding: 1px 4px;
+    border-radius: 3px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     font-weight: 500;
-    line-height: 1.2;
+    line-height: 1.1;
 }
 
 .calendario-manuencao-tag.aberta {
@@ -1646,17 +1646,17 @@ tr.linha-vencida td   { background: rgba(239,68,68,.07) !important; }
 
 .calendario-dia-badge {
     position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 24px;
-    height: 24px;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     background: var(--primary-color);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     font-weight: 700;
 }
 
@@ -1755,10 +1755,18 @@ tr.linha-vencida td   { background: rgba(239,68,68,.07) !important; }
     background: rgba(255,255,255,.03);
 }
 
+/* Ajuste de tamanho do texto para ocupar menos espaço */
+.calendario-dia-numero {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 3px;
+    color: var(--text-primary);
+}
+
 /* Responsividade */
 @media (max-width: 1024px) {
     .calendario-dia {
-        min-height: 80px;
+        min-height: auto;
     }
     
     .calendario-manuencao-tag {
@@ -1769,24 +1777,24 @@ tr.linha-vencida td   { background: rgba(239,68,68,.07) !important; }
 
 @media (max-width: 768px) {
     .calendario-dia {
-        min-height: 70px;
-        padding: 6px;
+        min-height: auto;
+        padding: 4px;
     }
     
     .calendario-dia-numero {
-        font-size: 0.9rem;
-        margin-bottom: 4px;
+        font-size: 0.8rem;
+        margin-bottom: 2px;
     }
     
     .calendario-manuencao-tag {
-        font-size: 0.65rem;
+        font-size: 0.6rem;
         padding: 1px 3px;
     }
     
     .calendario-dia-badge {
-        width: 20px;
-        height: 20px;
-        font-size: 0.65rem;
+        width: 18px;
+        height: 18px;
+        font-size: 0.55rem;
     }
     
     #modalCalendario .modal-content {
@@ -1808,8 +1816,8 @@ tr.linha-vencida td   { background: rgba(239,68,68,.07) !important; }
 /* Estados vazios */
 .calendario-dia-vazio {
     color: var(--text-secondary);
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     text-align: center;
-    padding: 12px 8px;
+    padding: 2px;
     font-style: italic;
 }
