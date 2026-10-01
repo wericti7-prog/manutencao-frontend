@@ -1541,3 +1541,275 @@ tr.linha-vencida td   { background: rgba(239,68,68,.07) !important; }
 [data-theme="dark"] .badge-prazo.urgente { background: #fca5a5; box-shadow: 0 0 0 2px rgba(252,165,165,.25); }
 [data-theme="dark"] .badge-prazo.alerta  { background: #facc15; box-shadow: 0 0 0 2px rgba(250,204,21,.25); }
 [data-theme="dark"] tr.linha-vencida td  { background: rgba(239,68,68,.12) !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ════════════════ ESTILOS DO CALENDÁRIO DE MANUTENÇÕES ════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.calendario-dia {
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    position: relative;
+    min-height: 100px;
+}
+
+.calendario-dia:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    transform: translateY(-2px);
+}
+
+.calendario-dia.fora-do-mes {
+    background: rgba(0,0,0,.02);
+    color: var(--text-secondary);
+    cursor: default;
+    opacity: 0.5;
+}
+
+.calendario-dia.fora-do-mes:hover {
+    box-shadow: none;
+    transform: none;
+}
+
+.calendario-dia.hoje {
+    border: 2px solid var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59,99,235,.1);
+}
+
+.calendario-dia-numero {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+}
+
+.calendario-dia.fora-do-mes .calendario-dia-numero {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.calendario-dia-manuencoes {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.calendario-manuencao-tag {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.calendario-manuencao-tag.aberta {
+    background: rgba(59,99,235,.15);
+    color: #1d4ed8;
+}
+
+.calendario-manuencao-tag.concluida {
+    background: rgba(16,185,129,.15);
+    color: #047857;
+}
+
+.calendario-manuencao-tag.cancelada {
+    background: rgba(239,68,68,.15);
+    color: #991b1b;
+}
+
+[data-theme="dark"] .calendario-manuencao-tag.aberta {
+    background: rgba(59,130,246,.2);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .calendario-manuencao-tag.concluida {
+    background: rgba(16,185,129,.2);
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .calendario-manuencao-tag.cancelada {
+    background: rgba(239,68,68,.2);
+    color: #fca5a5;
+}
+
+.calendario-dia-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.calendario-dia-badge.multiple {
+    background: #f59e0b;
+}
+
+.calendario-dia-badge.warning {
+    background: #ef4444;
+}
+
+/* Cores de fundo por status */
+.calendario-dia.com-aberta {
+    background: linear-gradient(135deg, rgba(59,99,235,.08) 0%, rgba(59,99,235,.04) 100%);
+}
+
+.calendario-dia.com-concluida {
+    background: linear-gradient(135deg, rgba(16,185,129,.08) 0%, rgba(16,185,129,.04) 100%);
+}
+
+.calendario-dia.com-cancelada {
+    background: linear-gradient(135deg, rgba(239,68,68,.08) 0%, rgba(239,68,68,.04) 100%);
+}
+
+.calendario-dia.com-multipla {
+    background: linear-gradient(135deg, rgba(245,158,11,.08) 0%, rgba(245,158,11,.04) 100%);
+}
+
+[data-theme="dark"] .calendario-dia {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .calendario-dia.fora-do-mes {
+    background: rgba(255,255,255,.03);
+}
+
+[data-theme="dark"] .calendario-dia.com-aberta {
+    background: linear-gradient(135deg, rgba(59,130,246,.15) 0%, rgba(59,130,246,.08) 100%);
+}
+
+[data-theme="dark"] .calendario-dia.com-concluida {
+    background: linear-gradient(135deg, rgba(16,185,129,.15) 0%, rgba(16,185,129,.08) 100%);
+}
+
+[data-theme="dark"] .calendario-dia.com-cancelada {
+    background: linear-gradient(135deg, rgba(239,68,68,.15) 0%, rgba(239,68,68,.08) 100%);
+}
+
+[data-theme="dark"] .calendario-dia.com-multipla {
+    background: linear-gradient(135deg, rgba(245,158,11,.15) 0%, rgba(245,158,11,.08) 100%);
+}
+
+/* Tabela de detalhes do dia */
+.calendario-dia-detalhes-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+.calendario-dia-detalhes-tabela thead th {
+    background: var(--light-bg);
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.calendario-dia-detalhes-tabela tbody td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+}
+
+.calendario-dia-detalhes-tabela tbody tr:hover {
+    background: var(--light-bg);
+}
+
+.calendario-dia-detalhes-tabela .link-equipamento {
+    color: var(--primary-color);
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.calendario-dia-detalhes-tabela .link-equipamento:hover {
+    text-decoration: underline;
+}
+
+[data-theme="dark"] .calendario-dia-detalhes-tabela thead th {
+    background: rgba(255,255,255,.05);
+}
+
+[data-theme="dark"] .calendario-dia-detalhes-tabela tbody tr:hover {
+    background: rgba(255,255,255,.03);
+}
+
+/* Responsividade */
+@media (max-width: 1024px) {
+    .calendario-dia {
+        min-height: 80px;
+    }
+    
+    .calendario-manuencao-tag {
+        font-size: 0.7rem;
+        padding: 2px 4px;
+    }
+}
+
+@media (max-width: 768px) {
+    .calendario-dia {
+        min-height: 70px;
+        padding: 6px;
+    }
+    
+    .calendario-dia-numero {
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+    }
+    
+    .calendario-manuencao-tag {
+        font-size: 0.65rem;
+        padding: 1px 3px;
+    }
+    
+    .calendario-dia-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 0.65rem;
+    }
+    
+    #modalCalendario .modal-content {
+        max-width: 95vw !important;
+        max-height: 90vh !important;
+    }
+}
+
+/* Animações */
+@keyframes calendarioPulso {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.calendario-dia.loading {
+    animation: calendarioPulso 1s ease-in-out infinite;
+}
+
+/* Estados vazios */
+.calendario-dia-vazio {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 12px 8px;
+    font-style: italic;
+}

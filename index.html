@@ -341,6 +341,9 @@
         <div id="manutencoes" class="tab-content active">
             <div class="section-header">
                 <h2>Manutenções em Aberto</h2>
+                <button onclick="window.abrirCalendario()" class="btn btn-secondary" style="display:inline-flex; align-items:center; gap:8px;">
+                    📅 Calendário
+                </button>
                 <button class="btn btn-primary" id="btnNovaManutencao">➕ Nova Manutenção</button>
             </div>
             <div class="filters">
@@ -1147,6 +1150,78 @@
         </div>
     </div>
 
+    <!-- ===== MODAL — Calendário de Manutenções ===== -->
+    <div id="modalCalendario" class="modal">
+        <div class="modal-content" style="max-width:1400px; max-height:95vh;">
+            <div class="modal-header">
+                <h3>📅 Calendário de Manutenções</h3>
+                <span class="close" data-modal="modalCalendario">&times;</span>
+            </div>
+            <div style="padding:25px; display:flex; flex-direction:column; gap:20px; max-height:calc(95vh - 120px); overflow-y:auto;">
+                
+                <!-- Controles de navegação -->
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+                    <button id="btnMesAnterior" class="btn btn-secondary" style="padding:8px 14px;">⬅️ Mês Anterior</button>
+                    <h2 id="calendarioMesAno" style="margin:0; font-size:1.3rem; min-width:200px; text-align:center;"></h2>
+                    <button id="btnProximoMes" class="btn btn-secondary" style="padding:8px 14px;">Próximo Mês ➡️</button>
+                    <button id="btnHoje" class="btn btn-primary" style="padding:8px 14px;">Hoje</button>
+                </div>
+
+                <!-- Legenda de cores -->
+                <div style="display:flex; gap:24px; flex-wrap:wrap; padding:12px; background:rgba(59,99,235,.05); border-radius:8px; border-left:4px solid var(--primary-color);">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="width:16px; height:16px; border-radius:4px; background:#3b82f6;"></div>
+                        <span style="font-size:.9rem;">Aberta</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="width:16px; height:16px; border-radius:4px; background:#10b981;"></div>
+                        <span style="font-size:.9rem;">Concluída</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="width:16px; height:16px; border-radius:4px; background:#f59e0b;"></div>
+                        <span style="font-size:.9rem;">Múltiplas</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="width:16px; height:16px; border-radius:4px; background:#ef4444;"></div>
+                        <span style="font-size:.9rem;">Cancelada</span>
+                    </div>
+                </div>
+
+                <!-- Calendário -->
+                <div id="calendarioCorpo" style="display:grid; grid-template-columns:repeat(7, 1fr); gap:8px; width:100%;">
+                    <!-- Dias da semana (cabeçalho) -->
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Dom</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Seg</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Ter</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Qua</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Qui</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Sex</div>
+                    <div style="font-weight:600; color:var(--text-secondary); text-align:center; padding:8px; border-bottom:2px solid var(--border-color);">Sáb</div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="modalCalendario">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL — Detalhes do Dia ===== -->
+    <div id="modalCalendarioDia" class="modal">
+        <div class="modal-content" style="max-width:800px;">
+            <div class="modal-header">
+                <h3 id="calendarioDiaData">Manutenções do dia</h3>
+                <span class="close" data-modal="modalCalendarioDia">&times;</span>
+            </div>
+            <div style="padding:25px; max-height:70vh; overflow-y:auto;">
+                <div id="calendarioDiaLista"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="modalCalendarioDia">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     </div><!-- /appPrincipal -->
 
     <!-- Modal Histórico de Acessos -->
@@ -1164,6 +1239,7 @@
             </div>
         </div>
     </div>
+    <script src="calendario-script.js"></script>
     <script type="module" src="script.js"></script>
     <script>
       // Keep-Alive — mantém o backend acordado
