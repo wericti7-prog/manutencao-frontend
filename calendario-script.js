@@ -295,17 +295,61 @@ window.abrirCalendario = function() {
 };
 
 // ─── Abrir Detalhes da Manutenção do Calendário ───────────────────────────
-window.abrirDetalhesManutencao = function(id) {
-    // Fechar modal do calendário
-    closeModal("modalCalendarioDia");
-    
-    // Chamar função verDetalhes diretamente (sem await, sem async)
-    // Ela está definida no script.js e já trata tudo
-    if (window.verDetalhes) {
-        verDetalhes(id);
-    } else {
-        // Se por algum motivo verDetalhes não existir, tenta outro método
-        alert("Erro: função de detalhes não disponível. Recarregue a página.");
+// Função INDEPENDENTE que não depende de verDetalhes()
+window.abrirDetalhesManutencao = async function(id) {
+    try {
+        closeModal("modalCalendarioDia");
+        
+        // Carregar dados da manutenção
+        const m = await api.getManutencao(id);
+        
+        if (!m) {
+            showError("Manutenção não encontrada");
+            return;
+        }
+        
+        // Montar HTML de detalhes (copiado de verDetalhes)
+        const statusEx = m.resultado_reparo || m.status_equipamento || m.status;
+        const reparoHtml = m.resultado_reparo
+            ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${esc(m.resultado_reparo)}</span></div>` 
+            : "";
+
+        const detalhesHtml = `
+            <div class="historico-info"><div class="historico-info-grid">
+                <div><strong>Nº:</strong> <span class="id-badge">${esc(m.numero)}</span></div>
+                <div><strong>Equipamento:</strong> ${esc(m.equipamento)}</div>
+                <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
+                <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
+                <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
+                <div><strong>Conclusão:</strong> ${formatDateTime(m.data_fim)}</div>
+                <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
+                ${reparoHtml}
+                <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
+                ${m.pecas ? `<div><strong>Peças:</strong> ${esc(m.pecas)}</div>` : ""}
+            </div></div>
+            <div style="margin-top:16px"><p><strong>Problema:</strong></p>
+                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
+            </div>
+            <div style="margin-top:12px"><p><strong>Solução:</strong></p>
+                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
+            </div>
+            <div style="margin-top:16px;text-align:right">
+                <button class="btn btn-secondary" style="font-size:.88rem;padding:8px 16px" onclick="alert('Recurso indisponível')" title="Ver histórico">📋 Ver histórico de edições</button>
+            </div>
+        `;
+
+        // Preencher modal diretamente
+        const modalTitle = document.getElementById("modalDetalhesTitle");
+        const modalContent = document.getElementById("modalDetalhesContent");
+        
+        if (modalTitle) modalTitle.textContent = `Atendimento #${esc(m.numero)}`;
+        if (modalContent) modalContent.innerHTML = detalhesHtml;
+        
+        // Abrir modal
+        openModal("modalDetalhes");
+        
+    } catch (err) {
+        showError("Erro ao carregar detalhes: " + err.message);
     }
 };
 
