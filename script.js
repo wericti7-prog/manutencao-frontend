@@ -2720,7 +2720,40 @@ window.abrirDetalhesManutencao = async function(id) {
     try {
         const m = await api.getManutencao(id);
         _simplesManutId = id;
-        await _carregarDetalhesManutencao(id);
+        
+        // Preencher modal de detalhes
+        const statusEx = m.resultado_reparo || m.status_equipamento || m.status;
+        const reparoHtml = m.resultado_reparo
+            ? `<div><strong>Reparo:</strong> <span class="badge ${getStatusBadge(m.resultado_reparo)}">${esc(m.resultado_reparo)}</span></div>`
+            : "";
+
+        const detalhesHtml = `
+            <div class="historico-info"><div class="historico-info-grid">
+                <div><strong>Nº:</strong> <span class="id-badge">${esc(m.numero)}</span></div>
+                <div><strong>Equipamento:</strong> ${esc(m.equipamento)}</div>
+                <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
+                <div><strong>Técnico:</strong> ${m.tecnico || "-"}</div>
+                <div><strong>Início:</strong> ${formatDateTime(m.data_inicio)}</div>
+                <div><strong>Conclusão:</strong> ${formatDateTime(m.data_fim)}</div>
+                <div><strong>Status:</strong> <span class="badge ${getStatusBadge(statusEx)}">${statusEx}</span></div>
+                ${reparoHtml}
+                <div><strong>Custo:</strong> ${formatCurrency(m.custo)}</div>
+                ${m.pecas ? `<div><strong>Peças:</strong> ${esc(m.pecas)}</div>` : ""}
+            </div></div>
+            <div style="margin-top:16px"><p><strong>Problema:</strong></p>
+                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.problema || "-"}</p>
+            </div>
+            <div style="margin-top:12px"><p><strong>Solução:</strong></p>
+                <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
+            </div>
+        `;
+
+        const modalTitle = document.getElementById("modalDetalhesTitle");
+        const modalContent = document.getElementById("modalDetalhesContent");
+        
+        if (modalTitle) modalTitle.textContent = `Atendimento #${esc(m.numero)}`;
+        if (modalContent) modalContent.innerHTML = detalhesHtml;
+        
         openModal("modalDetalhes");
     } catch (err) {
         showError("Erro ao carregar detalhes: " + err.message);
