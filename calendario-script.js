@@ -17,17 +17,17 @@ function calendarioInit() {
 // ─── Navegação ────────────────────────────────────────────────────────────
 function calendarioMesAnterior() {
     _calendarioData.setMonth(_calendarioData.getMonth() - 1);
-    calendarioRenderizar();
+    calendarioCarregar(); // Recarrega dados ao mudar mês
 }
 
 function calendarioProximoMes() {
     _calendarioData.setMonth(_calendarioData.getMonth() + 1);
-    calendarioRenderizar();
+    calendarioCarregar(); // Recarrega dados ao mudar mês
 }
 
 function calendarioIrHoje() {
     _calendarioData = new Date();
-    calendarioRenderizar();
+    calendarioCarregar(); // Recarrega dados ao voltar para hoje
 }
 
 // ─── Carregar Manutenções ─────────────────────────────────────────────────
@@ -295,13 +295,37 @@ window.abrirCalendario = function() {
 };
 
 // ─── Abrir Detalhes da Manutenção do Calendário ───────────────────────────
-window.abrirDetalhesManutencao = function(id) {
-    closeModal("modalCalendarioDia");
-    // Usa a função verDetalhes que já está definida em script.js
-    if (typeof verDetalhes === "function") {
-        verDetalhes(id);
-    } else {
-        showError("Erro ao carregar detalhes");
+window.abrirDetalhesManutencao = async function(id) {
+    try {
+        closeModal("modalCalendarioDia");
+        
+        // Tenta usar a função verDetalhes se existir
+        if (typeof verDetalhes === "function") {
+            await verDetalhes(id);
+        } else {
+            // Fallback: carrega dados manualmente
+            const m = await api.getManutencao(id);
+            if (m) {
+                _simplesManutId = id;
+                openModal("modalDetalhes");
+                // Preenche conteúdo básico
+                const detalhesHtml = `
+                    <div class="historico-info"><div class="historico-info-grid">
+                        <div><strong>Nº:</strong> <span class="id-badge">${esc(m.numero)}</span></div>
+                        <div><strong>Equipamento:</strong> ${esc(m.equipamento)}</div>
+                        <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
+                        <div><strong>Status:</strong> <span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span></div>
+                    </div></div>
+                `;
+                const modalTitle = document.getElementById("modalDetalhesTitle");
+                const modalContent = document.getElementById("modalDetalhesContent");
+                if (modalTitle) modalTitle.textContent = `Atendimento #${esc(m.numero)}`;
+                if (modalContent) modalContent.innerHTML = detalhesHtml;
+            }
+        }
+    } catch (err) {
+        closeModal("modalCalendarioDia");
+        showError("Erro ao carregar detalhes: " + err.message);
     }
 };
 
