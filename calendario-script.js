@@ -295,37 +295,17 @@ window.abrirCalendario = function() {
 };
 
 // ─── Abrir Detalhes da Manutenção do Calendário ───────────────────────────
-window.abrirDetalhesManutencao = async function(id) {
-    try {
-        closeModal("modalCalendarioDia");
-        
-        // Tenta usar a função verDetalhes se existir
-        if (typeof verDetalhes === "function") {
-            await verDetalhes(id);
-        } else {
-            // Fallback: carrega dados manualmente
-            const m = await api.getManutencao(id);
-            if (m) {
-                _simplesManutId = id;
-                openModal("modalDetalhes");
-                // Preenche conteúdo básico
-                const detalhesHtml = `
-                    <div class="historico-info"><div class="historico-info-grid">
-                        <div><strong>Nº:</strong> <span class="id-badge">${esc(m.numero)}</span></div>
-                        <div><strong>Equipamento:</strong> ${esc(m.equipamento)}</div>
-                        <div><strong>Localização:</strong> ${m.localizacao || "-"}</div>
-                        <div><strong>Status:</strong> <span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span></div>
-                    </div></div>
-                `;
-                const modalTitle = document.getElementById("modalDetalhesTitle");
-                const modalContent = document.getElementById("modalDetalhesContent");
-                if (modalTitle) modalTitle.textContent = `Atendimento #${esc(m.numero)}`;
-                if (modalContent) modalContent.innerHTML = detalhesHtml;
-            }
-        }
-    } catch (err) {
-        closeModal("modalCalendarioDia");
-        showError("Erro ao carregar detalhes: " + err.message);
+window.abrirDetalhesManutencao = function(id) {
+    // Fechar modal do calendário
+    closeModal("modalCalendarioDia");
+    
+    // Chamar função verDetalhes diretamente (sem await, sem async)
+    // Ela está definida no script.js e já trata tudo
+    if (window.verDetalhes) {
+        verDetalhes(id);
+    } else {
+        // Se por algum motivo verDetalhes não existir, tenta outro método
+        alert("Erro: função de detalhes não disponível. Recarregue a página.");
     }
 };
 
