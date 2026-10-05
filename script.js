@@ -2718,7 +2718,10 @@ window.abrirCalendario = function() {
 window.abrirDetalhesManutencao = async function(id) {
     closeModal("modalCalendarioDia");
     try {
-        const m = await api.getManutencao(id);
+        const [m, anexos] = await Promise.all([
+            api.getManutencao(id),
+            api.listarAnexos(id).catch(() => [])
+        ]);
         _simplesManutId = id;
         
         // Preencher modal de detalhes
@@ -2746,6 +2749,7 @@ window.abrirDetalhesManutencao = async function(id) {
             <div style="margin-top:12px"><p><strong>Solução:</strong></p>
                 <p style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:6px">${m.solucao || "-"}</p>
             </div>
+            ${nfHtmlSomenteLeitura(anexos, String(m.id))}
         `;
 
         const modalTitle = document.getElementById("modalDetalhesTitle");
