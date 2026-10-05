@@ -358,6 +358,11 @@ table td img[style*="width:40px"] {
 
 .modal.active { display: flex; justify-content: center; align-items: center; }
 
+/* Modal de detalhes sempre na frente do calendário */
+#modalDetalhes {
+    z-index: 10000 !important;
+}
+
 .modal-content {
     background-color: white;
     border-radius: 12px;

@@ -295,26 +295,19 @@ window.abrirCalendario = function() {
 };
 
 // ─── Abrir Detalhes da Manutenção do Calendário ───────────────────────────
-// Solução radical: simular clique em botão com onclick direto
-// Isso evita completamente qualquer problema do script.js
 window.abrirDetalhesManutencao = function(id) {
+    // Fechar AMBAS as modais do calendário
     closeModal("modalCalendarioDia");
+    closeModal("modalCalendario");
     
-    // Criar botão fantasma com onclick que chama verDetalhes
-    // Quando clicamos nele, a função é chamada diretamente pelo navegador
-    const botaoFantasma = document.createElement("button");
-    botaoFantasma.onclick = function() {
-        verDetalhes(id);
-    };
-    botaoFantasma.style.display = "none";
-    document.body.appendChild(botaoFantasma);
-    
-    // Simular clique no botão
-    botaoFantasma.click();
-    
-    // Remover botão após clique
+    // Aguardar um pouco para garantir que as modais foram fechadas
     setTimeout(() => {
-        document.body.removeChild(botaoFantasma);
+        // Agora chamar verDetalhes que abre a modal de detalhes
+        if (window.verDetalhes) {
+            verDetalhes(id);
+        } else {
+            showError("Erro ao carregar detalhes");
+        }
     }, 100);
 };
 
