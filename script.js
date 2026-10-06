@@ -899,12 +899,18 @@ async function loadFinalizados(pagina = 1) {
 
         if (search) {
             const s = search.toLowerCase();
-            lista = lista.filter(m =>
-                (m.numero      || "").toString().toLowerCase().includes(s) ||
-                (m.equipamento || "").toLowerCase().includes(s) ||
-                (m.tecnico     || "").toLowerCase().includes(s) ||
-                (m.problema    || "").toLowerCase().includes(s)
-            );
+            lista = lista.filter(m => {
+                // Busca EXATA para número
+                const numeroExato = (m.numero || "").toString().toLowerCase() === s;
+                
+                // Busca por substring para os outros campos
+                const equipamentoMatch = (m.equipamento || "").toLowerCase().includes(s);
+                const tecnicoMatch = (m.tecnico || "").toLowerCase().includes(s);
+                const problemaMatch = (m.problema || "").toLowerCase().includes(s);
+                const localizacaoMatch = (m.localizacao || "").toLowerCase().includes(s);
+                
+                return numeroExato || equipamentoMatch || tecnicoMatch || problemaMatch || localizacaoMatch;
+            });
         }
 
         _finalizadosListaCache = lista;
