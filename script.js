@@ -1294,7 +1294,7 @@ async function loadUsuarios() {
             }</span></td>
                 <td>${formatDate(u.criado_em)}</td>
                 <td>${u.ultimo_acesso ? formatDateTime(u.ultimo_acesso) : '<span style="color:var(--text-secondary);font-size:.82rem">Nunca</span>'}</td>
-                <td><button class="btn-icon btn-edit" onclick="editarUsuario(${u.id}, '${esc(u.nome)}', '${esc(u.username)}', '${esc(u.role)}')" title="Editar">✏️</button>
+                <td><button class="btn-icon btn-edit" onclick="u.role='manutencao'?verManutencoesUsuario(${u.id}, '${esc(u.nome)}', '${esc(u.username)}', '${esc(u.role)}')" title="Editar">✏️</button>
                     <button class="btn-icon" onclick="verLogAcessos(${u.id}, '${esc(u.nome)}')" title="Histórico de logins" style="background:none;border:none;cursor:pointer;font-size:1.1rem">🕐</button>
                     <button class="btn-icon btn-delete" onclick="removeUsuario(${u.id}, '${esc(u.username)}')">🗑️</button></td>
             </tr>`).join("");
@@ -1305,6 +1305,68 @@ async function loadUsuarios() {
             </table>`;
     } catch (err) { showError(err.message); }
 }
+
+window.verManutencoesUsuario = async function(id, nome) {
+    const modalTitle = document.getElementById("modalManutencoesLojaTitle");
+    const modalContent = document.getElementById("modalManutencoesLojaContent");
+    
+    if (modalTitle) modalTitle.textContent = `Manutenções - ${nome}`;
+    if (modalContent) modalContent.innerHTML = `<p style="color:var(--text-secondary)">Carregando...</p>`;
+    
+    openModal("modalManutencoesLoja");
+    
+    try {
+        // Adicionar botão de calendário no header
+        const header = document.querySelector("#modalManutencoesLoja .modal-header");
+        let btnCalendario = header?.querySelector(".btn-calendario-usuario");
+        if (!btnCalendario) {
+            btnCalendario = document.createElement("button");
+            btnCalendario.className = "btn btn-secondary btn-calendario-usuario";
+            btnCalendario.style.marginLeft = "auto";
+            btnCalendario.innerHTML = "📅 Calendário";
+            btnCalendario.onclick = window.abrirCalendario;
+            header?.appendChild(btnCalendario);
+        }
+        
+        // Carregar e exibir manutenções
+        const manuencoes = await api.listarManutencoes();
+        const filtradas = manuencoes; // Aqui você pode filtrar por técnico se necessário
+        
+        if (!filtradas.length) {
+            modalContent.innerHTML = `<p style="color:var(--text-secondary)">Nenhuma manutenção registrada.</p>`;
+            return;
+        }
+        
+        const html = `
+            <table style="width:100%;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left;padding:12px;border-bottom:2px solid var(--border-color)">Nº</th>
+                        <th style="text-align:left;padding:12px;border-bottom:2px solid var(--border-color)">Equipamento</th>
+                        <th style="text-align:left;padding:12px;border-bottom:2px solid var(--border-color)">Local</th>
+                        <th style="text-align:left;padding:12px;border-bottom:2px solid var(--border-color)">Status</th>
+                        <th style="text-align:left;padding:12px;border-bottom:2px solid var(--border-color)">Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filtradas.map(m => `
+                        <tr style="border-bottom:1px solid var(--border-color);cursor:pointer" onclick="verDetalhes(${m.id})">
+                            <td style="padding:12px">${esc(m.numero)}</td>
+                            <td style="padding:12px">${esc(m.equipamento)}</td>
+                            <td style="padding:12px">${m.localizacao || "-"}</td>
+                            <td style="padding:12px"><span class="badge ${getStatusBadge(m.status)}">${esc(m.status)}</span></td>
+                            <td style="padding:12px">${formatDate(m.data_inicio)}</td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>
+        `;
+        
+        modalContent.innerHTML = html;
+    } catch (err) {
+        modalContent.innerHTML = `<p style="color:var(--danger)">Erro: ${err.message}</p>`;
+    }
+};
 
 window.verLogAcessos = async function(id, nome) {
     const corpo = document.getElementById("logAcessosCorpo");
