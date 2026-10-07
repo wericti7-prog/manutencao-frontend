@@ -1748,11 +1748,13 @@ document.getElementById("btnNovoAguardandoColeta")?.addEventListener("click", ()
 
 document.getElementById("formAguardandoColeta")?.addEventListener("submit", async e => {
     e.preventDefault();
+    const descricaoValor = document.getElementById("aguardandoDescricao").value.trim();
     const dados = {
         equipamento: document.getElementById("aguardandoEquipamento").value.trim(),
         localizacao: document.getElementById("aguardandoLocalizacao").value || null,
-        descricao: document.getElementById("aguardandoDescricao").value.trim() || null,
+        descricao: descricaoValor || null,
     };
+    console.log("Enviando dados de Aguardando Coleta:", dados); // Debug
     try {
         await api.criarAguardandoColeta(dados);
         closeModal("modalAguardandoColeta");
@@ -1769,6 +1771,12 @@ window.verDetalhesAguardandoColeta = async function(id) {
             showError("Equipamento não encontrado");
             return;
         }
+        
+        // Verificar diferentes possíveis nomes do campo descricao
+        const descricao = item.descricao || item.descricao_problema || item.obs || item.observacao || item.notas || "";
+        
+        console.log("Item completo:", item); // Debug
+        console.log("Descrição encontrada:", descricao); // Debug
         
         const html = `
             <div style="margin-bottom:20px;">
@@ -1790,14 +1798,12 @@ window.verDetalhesAguardandoColeta = async function(id) {
                         <p style="margin:6px 0;color:var(--text-secondary);">${formatDateTime(item.criado_em)}</p>
                     </div>
                 </div>
-                ${item.descricao ? `
-                    <div style="margin-top:20px;">
-                        <strong>Descrição:</strong>
-                        <div style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:8px;line-height:1.6;white-space:pre-wrap;">
-                            ${esc(item.descricao)}
-                        </div>
+                <div style="margin-top:20px;">
+                    <strong>Descrição:</strong>
+                    <div style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:8px;line-height:1.6;white-space:pre-wrap;color:var(--text-secondary);min-height:60px;">
+                        ${descricao && descricao.trim() ? esc(descricao) : "<em>Nenhuma descrição adicionada</em>"}
                     </div>
-                ` : ''}
+                </div>
             </div>
         `;
         
