@@ -1726,6 +1726,7 @@ async function loadAguardandoColeta() {
             <td style="font-size:.85rem;color:var(--text-secondary)">${formatDateTime(item.criado_em)}</td>
             <td>
                 <div class="action-buttons">
+                    <button class="btn-icon btn-edit" title="Ver Detalhes" onclick="verDetalhesAguardandoColeta(${item.id})" style="background:none;border:none;cursor:pointer;font-size:1.1rem">👁️</button>
                     <button class="btn-icon btn-edit" title="Enviar para Manutenção" onclick="enviarParaManutencaoItem(${item.id})">🔧</button>
                     <button class="btn-icon btn-delete" title="Excluir" onclick="excluirAguardandoColetaItem(${item.id})">🗑️</button>
                 </div>
@@ -1750,6 +1751,7 @@ document.getElementById("formAguardandoColeta")?.addEventListener("submit", asyn
     const dados = {
         equipamento: document.getElementById("aguardandoEquipamento").value.trim(),
         localizacao: document.getElementById("aguardandoLocalizacao").value || null,
+        descricao: document.getElementById("aguardandoDescricao").value.trim() || null,
     };
     try {
         await api.criarAguardandoColeta(dados);
@@ -1757,6 +1759,55 @@ document.getElementById("formAguardandoColeta")?.addEventListener("submit", asyn
         loadAguardandoColeta();
     } catch (err) { showError(err.message); }
 });
+
+window.verDetalhesAguardandoColeta = async function(id) {
+    try {
+        const lista = await api.listarAguardandoColeta();
+        const item = lista.find(i => i.id === id);
+        
+        if (!item) {
+            showError("Equipamento não encontrado");
+            return;
+        }
+        
+        const html = `
+            <div style="margin-bottom:20px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                    <div>
+                        <strong>Equipamento:</strong>
+                        <p style="margin:6px 0;color:var(--text-secondary);">${esc(item.equipamento)}</p>
+                    </div>
+                    <div>
+                        <strong>Localização:</strong>
+                        <p style="margin:6px 0;color:var(--text-secondary);">${item.localizacao || "-"}</p>
+                    </div>
+                    <div>
+                        <strong>Adicionado por:</strong>
+                        <p style="margin:6px 0;color:var(--text-secondary);">${item.criado_por || "-"}</p>
+                    </div>
+                    <div>
+                        <strong>Data:</strong>
+                        <p style="margin:6px 0;color:var(--text-secondary);">${formatDateTime(item.criado_em)}</p>
+                    </div>
+                </div>
+                ${item.descricao ? `
+                    <div style="margin-top:20px;">
+                        <strong>Descrição:</strong>
+                        <div style="background:#f9fafb;padding:12px;border-radius:8px;margin-top:8px;line-height:1.6;white-space:pre-wrap;">
+                            ${esc(item.descricao)}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        document.getElementById("detalhesAguardandoTitulo").textContent = `Detalhes - ${esc(item.equipamento)}`;
+        document.getElementById("detalhesAguardandoConteudo").innerHTML = html;
+        openModal("modalDetalhesAguardandoColeta");
+    } catch (err) {
+        showError("Erro ao carregar detalhes: " + err.message);
+    }
+};
 
 window.enviarParaManutencaoItem = async function(id) {
     if (!confirm("Enviar este equipamento para manutenção? Isso criará um novo chamado e removerá o item desta lista.")) return;
