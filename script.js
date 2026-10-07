@@ -900,16 +900,9 @@ async function loadFinalizados(pagina = 1) {
         if (search) {
             const s = search.toLowerCase();
             lista = lista.filter(m => {
-                // Busca EXATA para número
-                const numeroExato = (m.numero || "").toString().toLowerCase() === s;
-                
-                // Busca por substring para os outros campos
-                const equipamentoMatch = (m.equipamento || "").toLowerCase().includes(s);
-                const tecnicoMatch = (m.tecnico || "").toLowerCase().includes(s);
-                const problemaMatch = (m.problema || "").toLowerCase().includes(s);
                 const localizacaoMatch = (m.localizacao || "").toLowerCase().includes(s);
-                
-                return numeroExato || equipamentoMatch || tecnicoMatch || problemaMatch || localizacaoMatch;
+                const equipamentoMatch = (m.equipamento || "").toLowerCase().includes(s);
+                return localizacaoMatch || equipamentoMatch;
             });
         }
 
