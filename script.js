@@ -1720,6 +1720,18 @@ async function loadAguardandoColeta() {
         if (lista && lista.length > 0) {
             console.log("Primeiro item completo:", lista[0]);
             console.log("Chaves do primeiro item:", Object.keys(lista[0]));
+            
+            // Workaround: se backend retorna descricao, armazenar no localStorage
+            const descricoes = JSON.parse(localStorage.getItem("aguardandoColetaDescricoes") || "{}");
+            lista.forEach(item => {
+                if (item.id && (item.descricao || item.descricao_problema || item.obs)) {
+                    const desc = item.descricao || item.descricao_problema || item.obs;
+                    if (desc && !descricoes[item.id]) {
+                        descricoes[item.id] = desc;
+                    }
+                }
+            });
+            localStorage.setItem("aguardandoColetaDescricoes", JSON.stringify(descricoes));
         }
         console.log("=== FIM DEBUG ===");
         if (!lista.length) {
@@ -1773,7 +1785,17 @@ document.getElementById("formAguardandoColeta")?.addEventListener("submit", asyn
     console.log("=== FIM DEBUG ===");
     
     try {
-        await api.criarAguardandoColeta(dados);
+        const resposta = await api.criarAguardandoColeta(dados);
+        console.log("Resposta da API:", resposta);
+        
+        // Workaround: armazenar descrição localmente se backend não retornar
+        if (resposta && resposta.id && descricaoValor) {
+            const descricoes = JSON.parse(localStorage.getItem("aguardandoColetaDescricoes") || "{}");
+            descricoes[resposta.id] = descricaoValor;
+            localStorage.setItem("aguardandoColetaDescricoes", JSON.stringify(descricoes));
+            console.log("Descrição armazenada localmente para ID:", resposta.id);
+        }
+        
         closeModal("modalAguardandoColeta");
         loadAguardandoColeta();
     } catch (err) { showError(err.message); }
@@ -1794,17 +1816,21 @@ window.verDetalhesAguardandoColeta = async function(id) {
         console.log("Item ID:", id);
         console.log("Item completo:", item);
         console.log("Todas as chaves do item:", Object.keys(item));
-        console.log("item.descricao:", item.descricao);
-        console.log("item.descricao_problema:", item.descricao_problema);
-        console.log("item.obs:", item.obs);
-        console.log("item.observacao:", item.observacao);
-        console.log("item.notas:", item.notas);
-        console.log("=== FIM DEBUG ===");
         
         // Verificar diferentes possíveis nomes do campo descricao
-        const descricao = item.descricao || item.descricao_problema || item.obs || item.observacao || item.notas || "";
+        let descricao = item.descricao || item.descricao_problema || item.obs || item.observacao || item.notas || "";
         
-        console.log("Descrição encontrada:", descricao);
+        // Fallback: buscar do localStorage
+        if (!descricao) {
+            const descricoes = JSON.parse(localStorage.getItem("aguardandoColetaDescricoes") || "{}");
+            descricao = descricoes[id] || "";
+            if (descricao) {
+                console.log("Descrição carregada do localStorage");
+            }
+        }
+        
+        console.log("Descrição final encontrada:", descricao);
+        console.log("=== FIM DEBUG ===");
         
         const html = `
             <div style="margin-bottom:20px;">
