@@ -1715,6 +1715,13 @@ async function loadAguardandoColeta() {
     el.innerHTML = '<div class="empty-state"><p>Carregando...</p></div>';
     try {
         const lista = await api.listarAguardandoColeta();
+        console.log("=== RESPOSTA DA API AGUARDANDO COLETA ===");
+        console.log("Lista completa:", lista);
+        if (lista && lista.length > 0) {
+            console.log("Primeiro item completo:", lista[0]);
+            console.log("Chaves do primeiro item:", Object.keys(lista[0]));
+        }
+        console.log("=== FIM DEBUG ===");
         if (!lista.length) {
             el.innerHTML = `<div class="empty-state"><h3>Nenhum equipamento aguardando coleta</h3><p>Tudo já foi enviado para manutenção.</p></div>`;
             return;
@@ -1748,13 +1755,23 @@ document.getElementById("btnNovoAguardandoColeta")?.addEventListener("click", ()
 
 document.getElementById("formAguardandoColeta")?.addEventListener("submit", async e => {
     e.preventDefault();
-    const descricaoValor = document.getElementById("aguardandoDescricao").value.trim();
+    const equipamentoInput = document.getElementById("aguardandoEquipamento").value.trim();
+    const localizacaoInput = document.getElementById("aguardandoLocalizacao").value;
+    const descricaoInput = document.getElementById("aguardandoDescricao");
+    const descricaoValor = descricaoInput ? descricaoInput.value.trim() : "";
+    
     const dados = {
-        equipamento: document.getElementById("aguardandoEquipamento").value.trim(),
-        localizacao: document.getElementById("aguardandoLocalizacao").value || null,
+        equipamento: equipamentoInput,
+        localizacao: localizacaoInput || null,
         descricao: descricaoValor || null,
     };
-    console.log("Enviando dados de Aguardando Coleta:", dados); // Debug
+    
+    console.log("=== DEBUG ENVIO AGUARDANDO COLETA ===");
+    console.log("Valor do textarea:", descricaoValor);
+    console.log("Dados a enviar:", dados);
+    console.log("Descrição vazia?", !descricaoValor);
+    console.log("=== FIM DEBUG ===");
+    
     try {
         await api.criarAguardandoColeta(dados);
         closeModal("modalAguardandoColeta");
@@ -1772,11 +1789,22 @@ window.verDetalhesAguardandoColeta = async function(id) {
             return;
         }
         
+        // Debug completo
+        console.log("=== DEBUG AGUARDANDO COLETA ===");
+        console.log("Item ID:", id);
+        console.log("Item completo:", item);
+        console.log("Todas as chaves do item:", Object.keys(item));
+        console.log("item.descricao:", item.descricao);
+        console.log("item.descricao_problema:", item.descricao_problema);
+        console.log("item.obs:", item.obs);
+        console.log("item.observacao:", item.observacao);
+        console.log("item.notas:", item.notas);
+        console.log("=== FIM DEBUG ===");
+        
         // Verificar diferentes possíveis nomes do campo descricao
         const descricao = item.descricao || item.descricao_problema || item.obs || item.observacao || item.notas || "";
         
-        console.log("Item completo:", item); // Debug
-        console.log("Descrição encontrada:", descricao); // Debug
+        console.log("Descrição encontrada:", descricao);
         
         const html = `
             <div style="margin-bottom:20px;">
