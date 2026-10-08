@@ -1779,13 +1779,6 @@ document.getElementById("formEditarAguardandoColeta")?.addEventListener("submit"
     }
     
     try {
-        const dados = { equipamento, localizacao: localizacao || null, descricao: descricao || null };
-        
-        // Atualizar via API (se suportado)
-        if (api.atualizarAguardandoColeta) {
-            await api.atualizarAguardandoColeta(id, dados);
-        }
-        
         // Armazenar descrição localmente
         const descricoes = JSON.parse(localStorage.getItem("aguardandoColetaDescricoes") || "{}");
         if (descricao) {
@@ -1794,6 +1787,9 @@ document.getElementById("formEditarAguardandoColeta")?.addEventListener("submit"
             delete descricoes[id];
         }
         localStorage.setItem("aguardandoColetaDescricoes", JSON.stringify(descricoes));
+        
+        // Nota: A edição de equipamento e localização seria feita via backend
+        // Por enquanto, apenas a descrição está sendo salva localmente
         
         closeModal("modalEditarAguardandoColeta");
         loadAguardandoColeta();

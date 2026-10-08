@@ -121,7 +121,6 @@ export function restaurarManutencao(id) { return apiFetch(`/lixeira/${id}/restau
 
 export function listarAguardandoColeta()     { return apiFetch("/aguardando-coleta"); }
 export function criarAguardandoColeta(dados) { return apiFetch("/aguardando-coleta", { method: "POST", body: JSON.stringify(dados) }); }
-export function atualizarAguardandoColeta(id, dados) { return apiFetch(`/aguardando-coleta/${id}`, { method: "PUT", body: JSON.stringify(dados) }); }
 export function excluirAguardandoColeta(id)  { return apiFetch(`/aguardando-coleta/${id}`, { method: "DELETE" }); }
 export function enviarParaManutencao(id)     { return apiFetch(`/aguardando-coleta/${id}/enviar`, { method: "POST" }); }
 
