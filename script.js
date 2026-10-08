@@ -1853,9 +1853,9 @@ window.verDetalhesAguardandoColeta = async function(id) {
                     </div>
                 </div>
                 <div style="margin-top:16px;">
-                    <strong>Descrição:</strong>
-                    <div style="background:#000;padding:10px;border-radius:6px;margin-top:6px;line-height:1.5;white-space:pre-wrap;color:#fff;max-height:120px;overflow-y:auto;font-size:0.9rem;">
-                        ${descricao && descricao.trim() ? esc(descricao) : "<em>Nenhuma descrição adicionada</em>"}
+                    <strong style="display:block;margin-bottom:8px;">Descrição:</strong>
+                    <div style="background:#1a2844;padding:12px 14px;border-radius:8px;line-height:1.6;white-space:pre-wrap;color:#e0e6ff;max-height:140px;overflow-y:auto;font-size:0.95rem;border:1px solid #2a3f5f;">
+                        ${descricao && descricao.trim() ? esc(descricao) : "<em style='color:#7a8aaf;'>Nenhuma descrição adicionada</em>"}
                     </div>
                 </div>
             </div>
