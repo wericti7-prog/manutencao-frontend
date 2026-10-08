@@ -1746,6 +1746,7 @@ async function loadAguardandoColeta() {
             <td>
                 <div class="action-buttons">
                     <button class="btn-icon btn-edit" title="Ver Detalhes" onclick="verDetalhesAguardandoColeta(${item.id})" style="background:none;border:none;cursor:pointer;font-size:1.1rem">👁️</button>
+                    <button class="btn-icon btn-edit" title="Editar" onclick="editarAguardandoColeta(${item.id})">✏️</button>
                     <button class="btn-icon btn-edit" title="Enviar para Manutenção" onclick="enviarParaManutencaoItem(${item.id})">🔧</button>
                     <button class="btn-icon btn-delete" title="Excluir" onclick="excluirAguardandoColetaItem(${item.id})">🗑️</button>
                 </div>
@@ -1763,6 +1764,42 @@ async function loadAguardandoColeta() {
 document.getElementById("btnNovoAguardandoColeta")?.addEventListener("click", () => {
     document.getElementById("formAguardandoColeta").reset();
     openModal("modalAguardandoColeta");
+});
+
+document.getElementById("formEditarAguardandoColeta")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const id = document.getElementById("editarAguardandoId").value;
+    const equipamento = document.getElementById("editarAguardandoEquipamento").value.trim();
+    const localizacao = document.getElementById("editarAguardandoLocalizacao").value;
+    const descricao = document.getElementById("editarAguardandoDescricao").value.trim();
+    
+    if (!equipamento) {
+        showError("Equipamento é obrigatório");
+        return;
+    }
+    
+    try {
+        const dados = { equipamento, localizacao: localizacao || null, descricao: descricao || null };
+        
+        // Atualizar via API (se suportado)
+        if (api.atualizarAguardandoColeta) {
+            await api.atualizarAguardandoColeta(id, dados);
+        }
+        
+        // Armazenar descrição localmente
+        const descricoes = JSON.parse(localStorage.getItem("aguardandoColetaDescricoes") || "{}");
+        if (descricao) {
+            descricoes[id] = descricao;
+        } else {
+            delete descricoes[id];
+        }
+        localStorage.setItem("aguardandoColetaDescricoes", JSON.stringify(descricoes));
+        
+        closeModal("modalEditarAguardandoColeta");
+        loadAguardandoColeta();
+    } catch (err) {
+        showError("Erro ao salvar: " + err.message);
+    }
 });
 
 document.getElementById("formAguardandoColeta")?.addEventListener("submit", async e => {
@@ -1800,6 +1837,35 @@ document.getElementById("formAguardandoColeta")?.addEventListener("submit", asyn
         loadAguardandoColeta();
     } catch (err) { showError(err.message); }
 });
+
+window.editarAguardandoColeta = async function(id) {
+    try {
+        const lista = await api.listarAguardandoColeta();
+        const item = lista.find(i => i.id === id);
+        
+        if (!item) {
+            showError("Equipamento não encontrado");
+            return;
+        }
+        
+        // Buscar descrição do localStorage se não estiver no objeto
+        let descricao = item.descricao || "";
+        if (!descricao) {
+            const descricoes = JSON.parse(localStorage.getItem("aguardandoColetaDescricoes") || "{}");
+            descricao = descricoes[id] || "";
+        }
+        
+        // Preencher formulário de edição
+        document.getElementById("editarAguardandoId").value = id;
+        document.getElementById("editarAguardandoEquipamento").value = item.equipamento;
+        document.getElementById("editarAguardandoLocalizacao").value = item.localizacao || "";
+        document.getElementById("editarAguardandoDescricao").value = descricao;
+        
+        openModal("modalEditarAguardandoColeta");
+    } catch (err) {
+        showError("Erro ao carregar dados: " + err.message);
+    }
+};
 
 window.verDetalhesAguardandoColeta = async function(id) {
     try {
