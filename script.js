@@ -2141,13 +2141,11 @@ window.abrirMovimentoEstoque = function(id, tipo) {
 
 
 function _atualizarCampoLojaMovimento() {
-    const tipo  = document.getElementById("estoqueMovTipo").value;
+    // Loja é obrigatória tanto para Entrada quanto para Saída
     const grupo = document.getElementById("estoqueMovLojaGroup");
     const campo = document.getElementById("estoqueMovLoja");
-    const ehEntrada = tipo === "entrada";
-    grupo.style.display = ehEntrada ? "" : "none";
-    campo.required = ehEntrada;
-    if (!ehEntrada) campo.value = "";
+    grupo.style.display = "";
+    campo.required = true;
 }
 
 document.getElementById("estoqueMovTipo")?.addEventListener("change", _atualizarCampoLojaMovimento);
@@ -2159,21 +2157,19 @@ document.getElementById("formEstoqueMovimento")?.addEventListener("submit", asyn
     const loja  = document.getElementById("estoqueMovLoja").value;
     const motivoDigitado = document.getElementById("estoqueMovMotivo").value.trim();
 
-    if (tipo === "entrada" && !loja) {
-        showError("Selecione a loja da entrada.");
+    if (!loja) {
+        showError(`Selecione a loja da ${tipo === "entrada" ? "entrada" : "saída"}.`);
         return;
     }
 
     // A loja é registrada junto ao motivo, para aparecer no histórico
-    const motivo = tipo === "entrada"
-        ? [loja, motivoDigitado].filter(Boolean).join(" — ")
-        : (motivoDigitado || null);
+    const motivo = [loja, motivoDigitado].filter(Boolean).join(" — ");
 
     const dados = {
         tipo,
         quantidade: parseInt(document.getElementById("estoqueMovQuantidade").value),
         motivo:     motivo || null,
-        loja:       tipo === "entrada" ? loja : null,
+        loja,
     };
     try {
         await api.movimentarEstoque(id, dados);
