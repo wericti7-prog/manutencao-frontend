@@ -2130,6 +2130,8 @@ window.abrirMovimentoEstoque = function(id, tipo) {
     document.getElementById("estoqueMovItemId").value = id;
     document.getElementById("estoqueMovTipo").value    = tipo;
     document.getElementById("estoqueMovQuantidade").value = 1;
+    document.getElementById("estoqueMovLoja").value = "";
+    _atualizarCampoLojaMovimento();
     document.getElementById("modalEstoqueMovimentoTitulo").textContent =
         (tipo === "entrada" ? "⇅ Entrada — " : "⇅ Saída — ") + item.nome;
     document.getElementById("estoqueMovDisponivel").textContent =
@@ -2138,13 +2140,40 @@ window.abrirMovimentoEstoque = function(id, tipo) {
 };
 
 
+function _atualizarCampoLojaMovimento() {
+    const tipo  = document.getElementById("estoqueMovTipo").value;
+    const grupo = document.getElementById("estoqueMovLojaGroup");
+    const campo = document.getElementById("estoqueMovLoja");
+    const ehEntrada = tipo === "entrada";
+    grupo.style.display = ehEntrada ? "" : "none";
+    campo.required = ehEntrada;
+    if (!ehEntrada) campo.value = "";
+}
+
+document.getElementById("estoqueMovTipo")?.addEventListener("change", _atualizarCampoLojaMovimento);
+
 document.getElementById("formEstoqueMovimento")?.addEventListener("submit", async e => {
     e.preventDefault();
-    const id = document.getElementById("estoqueMovItemId").value;
+    const id    = document.getElementById("estoqueMovItemId").value;
+    const tipo  = document.getElementById("estoqueMovTipo").value;
+    const loja  = document.getElementById("estoqueMovLoja").value;
+    const motivoDigitado = document.getElementById("estoqueMovMotivo").value.trim();
+
+    if (tipo === "entrada" && !loja) {
+        showError("Selecione a loja da entrada.");
+        return;
+    }
+
+    // A loja é registrada junto ao motivo, para aparecer no histórico
+    const motivo = tipo === "entrada"
+        ? [loja, motivoDigitado].filter(Boolean).join(" — ")
+        : (motivoDigitado || null);
+
     const dados = {
-        tipo:       document.getElementById("estoqueMovTipo").value,
+        tipo,
         quantidade: parseInt(document.getElementById("estoqueMovQuantidade").value),
-        motivo:     document.getElementById("estoqueMovMotivo").value.trim() || null,
+        motivo:     motivo || null,
+        loja:       tipo === "entrada" ? loja : null,
     };
     try {
         await api.movimentarEstoque(id, dados);
@@ -2185,17 +2214,32 @@ async function _carregarHistoricoEstoqueGeral() {
             return;
         }
         corpo.innerHTML = `
-            <table>
-                <thead><tr><th>Equipamento</th><th>Tipo</th><th>Qtd.</th><th>Motivo</th><th>Usuário</th><th>Data</th></tr></thead>
+            <table style="width:100%;table-layout:fixed;border-collapse:collapse;">
+                <colgroup>
+                    <col style="width:24%">
+                    <col style="width:12%">
+                    <col style="width:8%">
+                    <col style="width:28%">
+                    <col style="width:12%">
+                    <col style="width:16%">
+                </colgroup>
+                <thead><tr>
+                    <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Equipamento</th>
+                    <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Tipo</th>
+                    <th style="text-align:center;padding:12px 14px;white-space:nowrap;">Qtd.</th>
+                    <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Motivo</th>
+                    <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Usuário</th>
+                    <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Data</th>
+                </tr></thead>
                 <tbody>
                     ${movs.map(m => `
-                        <tr>
-                            <td>${esc(m.item_nome || "-")}</td>
-                            <td><span class="badge badge-movimentacao" title="${m.tipo === "entrada" ? "Entrada de Equipamento" : "Saída de Equipamento"}">⇅ ${m.tipo === "entrada" ? "Entrada" : "Saída"}</span></td>
-                            <td>${m.quantidade}</td>
-                            <td>${m.motivo ? esc(m.motivo) : "-"}</td>
-                            <td>${esc(m.usuario)}</td>
-                            <td style="font-size:.85rem;color:var(--text-secondary)">${formatDateTime(m.criado_em)}</td>
+                        <tr style="border-top:1px solid var(--border-color);">
+                            <td style="padding:12px 14px;vertical-align:top;word-break:normal;overflow-wrap:break-word;">${esc(m.item_nome || "-")}</td>
+                            <td style="padding:12px 14px;vertical-align:top;white-space:nowrap;"><span class="badge badge-movimentacao" title="${m.tipo === "entrada" ? "Entrada de Equipamento" : "Saída de Equipamento"}">⇅ ${m.tipo === "entrada" ? "Entrada" : "Saída"}</span></td>
+                            <td style="padding:12px 14px;vertical-align:top;text-align:center;">${m.quantidade}</td>
+                            <td style="padding:12px 14px;vertical-align:top;word-break:normal;overflow-wrap:break-word;line-height:1.5;">${m.motivo ? esc(m.motivo) : "-"}</td>
+                            <td style="padding:12px 14px;vertical-align:top;word-break:normal;overflow-wrap:break-word;">${esc(m.usuario)}</td>
+                            <td style="padding:12px 14px;vertical-align:top;white-space:nowrap;font-size:.85rem;color:var(--text-secondary)">${formatDateTime(m.criado_em)}</td>
                         </tr>`).join("")}
                 </tbody>
             </table>`;
