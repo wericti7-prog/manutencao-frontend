@@ -2235,7 +2235,7 @@ async function _carregarHistoricoEstoqueGeral() {
                     ${movs.map(m => `
                         <tr style="border-top:1px solid var(--border-color);">
                             <td style="padding:12px 14px;vertical-align:top;word-break:normal;overflow-wrap:break-word;">${esc(m.item_nome || "-")}</td>
-                            <td style="padding:12px 14px;vertical-align:top;white-space:nowrap;"><span class="badge badge-movimentacao" title="${m.tipo === "entrada" ? "Entrada de Equipamento" : "Saída de Equipamento"}">⇅ ${m.tipo === "entrada" ? "Entrada" : "Saída"}</span></td>
+                            <td style="padding:12px 14px;vertical-align:top;white-space:nowrap;"><span class="badge ${m.tipo === "entrada" ? "badge-entrada" : "badge-saida"}" title="${m.tipo === "entrada" ? "Entrada de Equipamento" : "Saída de Equipamento"}">⇅ ${m.tipo === "entrada" ? "Entrada" : "Saída"}</span></td>
                             <td style="padding:12px 14px;vertical-align:top;text-align:center;">${m.quantidade}</td>
                             <td style="padding:12px 14px;vertical-align:top;word-break:normal;overflow-wrap:break-word;line-height:1.5;">${m.motivo ? esc(m.motivo) : "-"}</td>
                             <td style="padding:12px 14px;vertical-align:top;word-break:normal;overflow-wrap:break-word;">${esc(m.usuario)}</td>
