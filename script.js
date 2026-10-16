@@ -2199,6 +2199,14 @@ window.abrirHistoricoEstoqueGeral = async function(itemIdPreSelecionado = "") {
 
 document.getElementById("estoqueHistoricoFiltroItem")?.addEventListener("change", () => _carregarHistoricoEstoqueGeral());
 
+window.excluirMovimentoEstoqueItem = async function(id) {
+    if (!confirm("Excluir esta movimentação do histórico?")) return;
+    try {
+        await api.excluirMovimentoEstoque(id);
+        _carregarHistoricoEstoqueGeral();
+    } catch (err) { showError("Erro ao excluir: " + err.message); }
+};
+
 async function _carregarHistoricoEstoqueGeral() {
     const corpo = document.getElementById("estoqueHistoricoCorpo");
     const itemId = document.getElementById("estoqueHistoricoFiltroItem")?.value || null;
@@ -2209,15 +2217,17 @@ async function _carregarHistoricoEstoqueGeral() {
             corpo.innerHTML = `<p style="color:var(--text-secondary)">Nenhuma movimentação registrada ainda.</p>`;
             return;
         }
+        const podeExcluirMov = ["gerencia", "admin"].includes(api.getUsuarioLogado()?.role || "");
         corpo.innerHTML = `
             <table style="width:100%;table-layout:fixed;border-collapse:collapse;">
                 <colgroup>
-                    <col style="width:24%">
+                    <col style="width:22%">
+                    <col style="width:11%">
+                    <col style="width:7%">
+                    <col style="width:26%">
                     <col style="width:12%">
+                    <col style="width:14%">
                     <col style="width:8%">
-                    <col style="width:28%">
-                    <col style="width:12%">
-                    <col style="width:16%">
                 </colgroup>
                 <thead><tr>
                     <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Equipamento</th>
@@ -2226,6 +2236,7 @@ async function _carregarHistoricoEstoqueGeral() {
                     <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Motivo</th>
                     <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Usuário</th>
                     <th style="text-align:left;padding:12px 14px;white-space:nowrap;">Data</th>
+                    <th style="text-align:center;padding:12px 14px;white-space:nowrap;">Ações</th>
                 </tr></thead>
                 <tbody>
                     ${movs.map(m => `
@@ -2236,6 +2247,7 @@ async function _carregarHistoricoEstoqueGeral() {
                             <td style="padding:12px 14px;vertical-align:top;word-break:normal;overflow-wrap:break-word;line-height:1.5;">${m.motivo ? esc(m.motivo) : "-"}</td>
                             <td style="padding:12px 14px;vertical-align:top;word-break:normal;overflow-wrap:break-word;">${esc(m.usuario)}</td>
                             <td style="padding:12px 14px;vertical-align:top;white-space:nowrap;font-size:.85rem;color:var(--text-secondary)">${formatDateTime(m.criado_em)}</td>
+                            <td style="padding:12px 14px;vertical-align:top;text-align:center;">${podeExcluirMov ? `<button class="btn-icon btn-delete" title="Excluir movimentação" onclick="excluirMovimentoEstoqueItem(${m.id})">🗑️</button>` : ""}</td>
                         </tr>`).join("")}
                 </tbody>
             </table>`;
