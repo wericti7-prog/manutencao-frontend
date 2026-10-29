@@ -127,6 +127,7 @@ export function enviarParaManutencao(id)     { return apiFetch(`/aguardando-cole
 
 export function listarChat(desdeId = 0)  { return apiFetch(`/chat?desde_id=${desdeId}`); }
 export function enviarChat(dados)        { return apiFetch("/chat", { method: "POST", body: JSON.stringify(dados) }); }
+export function excluirChatMensagem(id) { return apiFetch(`/chat/${id}`, { method: "DELETE" }); }
 
 // ─── Estoque ───────────────────────────────────────────────────────────────────
 export function listarEstoque(params = {}) {

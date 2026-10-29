@@ -88,6 +88,11 @@ function mostrarLogin() {
     chatParar();
     eqChatParar();
     _chatUltimoId = 0; _chatNaoLidas = 0; _chatAnexos = [];
+    // Remove o widget do chat: no próximo login ele é recriado vazio,
+    // evitando que as mensagens antigas sejam adicionadas de novo
+    document.getElementById("chat-fab")?.remove();
+    document.getElementById("chat-widget")?.remove();
+    _chatAberto = false;
     document.getElementById("appPrincipal").style.display = "none";
     document.getElementById("telaLogin").style.display    = "flex";
     document.getElementById("formLogin").reset();
@@ -2295,7 +2300,7 @@ async function _chatCarregarNovas() {
             const vazio = document.getElementById("chat-vazio");
             if (vazio) vazio.remove();
             const minha = m.autor === api.getUsuarioLogado()?.nome;
-            lista.appendChild(_chatBolha(m.autor, m.role, m.texto, m.criado_em, m.anexos || [], minha, "chat"));
+            lista.appendChild(_chatBolha(m.autor, m.role, m.texto, m.criado_em, m.anexos || [], minha, "chat", m.id));
         });
         _chatScrollBottom("chat-lista");
         if (!_chatAberto) { _chatNaoLidas++; _chatAtualizarBadge(); }
@@ -2314,8 +2319,9 @@ function _chatAtualizarBadge() {
     badge.style.display = _chatNaoLidas > 0 ? "flex" : "none";
 }
 
-function _chatBolha(autor, role, texto, criado_em, anexos, minha, prefixo) {
+function _chatBolha(autor, role, texto, criado_em, anexos, minha, prefixo, msgId) {
     const wrap = document.createElement("div");
+    if (msgId) wrap.dataset.msgId = msgId;
     wrap.className = "chat-msg-wrap " + (minha ? "chat-msg-minha" : "chat-msg-deles");
     const hora = criado_em ? new Date(criado_em).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "";
     const label = role === "manutencao" ? "🔧 " + autor
@@ -2334,15 +2340,25 @@ function _chatBolha(autor, role, texto, criado_em, anexos, minha, prefixo) {
                 <span class="chat-anexo-dl">⬇️</span>
             </div>`).join("");
     }
+    const podeApagar = msgId && api.getUsuarioLogado()?.role === "gerencia";
     wrap.innerHTML = `
         <div class="chat-bolha">
             <div class="chat-autor">${label}</div>
             ${texto ? `<div class="chat-texto">${texto}</div>` : ""}
             ${anexosHtml}
-            <div class="chat-hora">${hora}</div>
+            <div class="chat-hora">${hora}${podeApagar ? ` <button class="btn-icon btn-delete" title="Apagar mensagem" style="font-size:.7rem;padding:0 4px;margin-left:6px" onclick="chatApagarMensagem(${msgId})">🗑️</button>` : ""}</div>
         </div>`;
     return wrap;
 }
+
+window.chatApagarMensagem = async function(id) {
+    if (api.getUsuarioLogado()?.role !== "gerencia") return;
+    if (!confirm("Apagar esta mensagem do chat geral?")) return;
+    try {
+        await api.excluirChatMensagem(id);
+        document.querySelector(`#chat-lista [data-msg-id="${id}"]`)?.remove();
+    } catch (err) { showError("Erro ao apagar mensagem: " + err.message); }
+};
 
 window.chatVerAnexo = function(b64enc, nomeEnc, tipoEnc) {
     const a = document.createElement("a");
